@@ -1,0 +1,8 @@
+
+struct NetCheckerRequest {
+
+}
+
+struct NetCheckerResponse {
+    
+}
