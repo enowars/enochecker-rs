@@ -81,27 +81,27 @@ where
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct CheckerRequest {
-    // #[serde(rename="runId")]
+    #[serde(rename="runId")]
     run_id: u64,
     method: String,
     address: String,
-    // #[serde(rename="serviceId")]
+    #[serde(rename="serviceId")]
     service_id: u64,
-    // #[serde(rename="serviceName")]
+    #[serde(rename="serviceName")]
     service_name: String,
-    // #[serde(rename="teamId")]
+    #[serde(rename="teamId")]
     team_id: u64,
-    // #[serde(rename="teamName")]
+    #[serde(rename="teamName")]
     team_name: String,
-    // #[serde(rename="roundId")]
+    #[serde(rename="roundId")]
     round_id: u64,
-    // #[serde(rename="relatedRoundId")]
+    #[serde(rename="relatedRoundId")]
     related_round_id: u64,
     flag: Option<String>,
-    // #[serde(rename="flagIndex")]
+    #[serde(rename="flagIndex")]
     flag_index: u64,
     timeout: u64,     // Timeout in miliseconds
-    // #[serde(rename="runId")]
+    #[serde(rename="roundLength")]
     round_length: u64, // Round Length in seconds
 }
 
@@ -300,7 +300,7 @@ mod user_tests {
     async fn test_method_call() {
         let mut srv = actix_web::test::init_service(checker_app!(TestChecker)).await;
         
-        let request_data = serde_json::json!(CheckerRequest {
+        let request_data = serde_json::to_string_pretty(&CheckerRequest {
             run_id: 1,
             method: "putflag".to_string(),
             service_id: 1,
@@ -316,7 +316,6 @@ mod user_tests {
             team_name: "TESTTEAM".to_string(),
         });
 
-        println!("{:?}", request_data.to_string());
 
         let req = test::TestRequest::with_uri("/")
             .method(Method::POST)
