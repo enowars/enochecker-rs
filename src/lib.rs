@@ -17,39 +17,30 @@ pub type CheckerResult = Result<(), CheckerError>;
 
 #[async_trait]
 pub trait Checker {
+    const SERVICE_NAME: &'static str;
     const FLAG_COUNT: u64;
     const NOISE_COUNT: u64;
     const HAVOC_COUNT: u64;
 
-    async fn putflag() -> CheckerResult {
+    // PUTFLAG/GETFLAG are required
+    async fn putflag(checker_request: &CheckerRequest) -> CheckerResult;
+    async fn getflag(checker_request: &CheckerRequest) -> CheckerResult;
+
+    async fn putnoise(_checker_request: &CheckerRequest) -> CheckerResult {
         unimplemented!(
             "{:?} requested, but method is not implemented!",
             stringify!($func_name)
         );
     }
 
-    async fn getflag() -> CheckerResult {
+    async fn getnoise(_checker_request: &CheckerRequest) -> CheckerResult {
         unimplemented!(
             "{:?} requested, but method is not implemented!",
             stringify!($func_name)
         );
     }
 
-    async fn putnoise() -> CheckerResult {
-        unimplemented!(
-            "{:?} requested, but method is not implemented!",
-            stringify!($func_name)
-        );
-    }
-
-    async fn getnoise() -> CheckerResult {
-        unimplemented!(
-            "{:?} requested, but method is not implemented!",
-            stringify!($func_name)
-        );
-    }
-
-    async fn havoc() -> CheckerResult {
+    async fn havoc(_checker_request: &CheckerRequest) -> CheckerResult {
         unimplemented!(
             "{:?} requested, but method is not implemented!",
             stringify!($func_name)
@@ -58,14 +49,14 @@ pub trait Checker {
 }
 
 #[derive(Serialize, Debug)]
-struct ServiceInfo {
+pub struct ServiceInfo {
     service_name: &'static str,
     flag_count: u64,
     noise_count: u64,
     havoc_count: u64,
 }
 
-async fn service_info<C>() -> web::Json<ServiceInfo>
+pub async fn service_info<C>() -> web::Json<ServiceInfo>
 where
     C: Checker,
 {
@@ -106,7 +97,7 @@ pub struct CheckerRequest {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-struct CheckerResponse {
+pub struct CheckerResponse {
     result: String,
     message: Option<String>,
 }
@@ -136,15 +127,15 @@ impl From<CheckerResult> for CheckerResponse {
     }
 }
 
-async fn check<C: Checker>(
+pub async fn check<C: Checker>(
     checker_request: web::Json<CheckerRequest>,
 ) -> web::Json<CheckerResponse> {
     let checker_result_fut = match checker_request.method.as_str() {
-        "putflag" => C::putflag(),
-        "getflag" => C::getflag(),
-        "putnoise" => C::putnoise(),
-        "getnoise" => C::getnoise(),
-        "havoc" => C::havoc(),
+        "putflag" => C::putflag(&checker_request),
+        "getflag" => C::getflag(&checker_request),
+        "putnoise" => C::putnoise(&checker_request),
+        "getnoise" => C::getnoise(&checker_request),
+        "havoc" => C::havoc(&checker_request),
         _ => {
             unimplemented!();
         }
@@ -202,21 +193,22 @@ mod tests {
 
     #[async_trait]
     impl Checker for TestChecker {
+        const SERVICE_NAME: &'static str = "Test";
         const FLAG_COUNT: u64 = 1;
         const NOISE_COUNT: u64 = 1;
         const HAVOC_COUNT: u64 = 1;
 
-        async fn putflag() -> CheckerResult {
+        async fn putflag(_checker_request: &CheckerRequest) -> CheckerResult {
             println!("putflag");
             Ok(())
         }
 
-        async fn getflag() -> CheckerResult {
+        async fn getflag(_checker_request: &CheckerRequest) -> CheckerResult {
             println!("getflag");
             panic!("GETFLAG_FAILED");
         }
 
-        async fn havoc() -> CheckerResult {
+        async fn havoc(_checker_request: &CheckerRequest) -> CheckerResult {
             println!("Havoc");
             Ok(())
         }
@@ -229,19 +221,76 @@ mod tests {
     }
     #[test]
     fn test_ok_method() {
-        assert_eq!(block_on(TestChecker::putflag()), Ok(()));
+        let req = CheckerRequest {
+            run_id: 1,
+            address: "127.0.0.1".to_string(),
+            method: "putflag".to_string(),
+            team_name: "ENOTESTTEAM".to_string(),
+            team_id: 1,
+
+            flag: Some("ENOTESTFLAG".to_string()),
+            flag_index: 1,
+            
+            service_id: 0,
+            service_name: "TestService".to_string(),
+
+            round_id: 1,
+            related_round_id: 1,
+
+            round_length: 60,
+            timeout: 15000,
+        };
+        assert_eq!(block_on(TestChecker::putflag(&req)), Ok(()));
     }
 
     #[test]
     #[should_panic]
     fn test_panicing_method() {
-        block_on(TestChecker::getflag());
+        let req = CheckerRequest {
+            run_id: 1,
+            address: "127.0.0.1".to_string(),
+            method: "getflag".to_string(),
+            team_name: "ENOTESTTEAM".to_string(),
+            team_id: 1,
+
+            flag: Some("ENOTESTFLAG".to_string()),
+            flag_index: 1,
+            
+            service_id: 0,
+            service_name: "TestService".to_string(),
+
+            round_id: 1,
+            related_round_id: 1,
+
+            round_length: 60,
+            timeout: 15000,
+        };
+        block_on(TestChecker::getflag(&req));
     }
 
     #[test]
     #[should_panic]
     fn test_unimplemented_method() {
-        block_on(TestChecker::putnoise());
+        let req = CheckerRequest {
+            run_id: 1,
+            address: "127.0.0.1".to_string(),
+            method: "putnoise".to_string(),
+            team_name: "ENOTESTTEAM".to_string(),
+            team_id: 1,
+
+            flag: Some("ENOTESTFLAG".to_string()),
+            flag_index: 1,
+            
+            service_id: 0,
+            service_name: "TestService".to_string(),
+
+            round_id: 1,
+            related_round_id: 1,
+
+            round_length: 60,
+            timeout: 15000,
+        };
+        block_on(TestChecker::putnoise(&req));
     }
 
     #[test]
@@ -265,21 +314,22 @@ mod user_tests {
 
     #[async_trait]
     impl Checker for TestChecker {
+        const SERVICE_NAME: &'static str = "TestService";
         const FLAG_COUNT: u64 = 1;
         const NOISE_COUNT: u64 = 1;
         const HAVOC_COUNT: u64 = 1;
 
-        async fn putflag() -> CheckerResult {
+        async fn putflag(_checker_request: &CheckerRequest) -> CheckerResult {
             println!("putflag");
             Ok(())
         }
 
-        async fn getflag() -> CheckerResult {
+        async fn getflag(_checker_request: &CheckerRequest) -> CheckerResult {
             println!("getflag");
             Err(CheckerError::Mumble("Flag was not able to be retrieved!"))
         }
 
-        async fn havoc() -> CheckerResult {
+        async fn havoc(_checker_request: &CheckerRequest) -> CheckerResult {
             println!("Havoc");
             Ok(())
         }
