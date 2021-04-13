@@ -1,7 +1,7 @@
 use std::any::type_name;
 use std::time::Duration;
 
-use actix_web::{web, App, HttpServer};
+use actix_web::{web, App, HttpServer, HttpResponse};
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use tokio::time::timeout;
@@ -154,6 +154,11 @@ pub async fn check<C: Checker>(
     web::Json(CheckerResponse::from(checker_result))
 }
 
+// #[actix_web::get("/")]
+// pub async fn request_form() -> std::io::Result<actix_files::NamedFile> {
+//     Ok(actix_files::NamedFile::open("post.html")?)
+// }
+
 pub async fn setup_checker<C>()
 where
     C: Checker + 'static,
@@ -162,6 +167,7 @@ where
         App::new()
             .route("/service", web::get().to(service_info::<C>))
             .route("/", web::post().to(check::<C>))
+            // .service( request_form)
     })
     .bind("0.0.0.0:3031")
     .expect("Failed to bind to socket")
@@ -180,6 +186,7 @@ macro_rules! checker_app {
                 actix_web::web::get().to($crate::service_info::<$C>),
             )
             .route("/", actix_web::web::post().to($crate::check::<$C>))
+            // .service($crate::request_form)
     };
 }
 
@@ -368,7 +375,22 @@ mod user_tests {
             team_name: "TESTTEAM".to_string(),
         });
 
-
+        let req = serde_json::to_string_pretty(&CheckerRequest {
+            run_id: 1,
+            method: "putflag".to_string(),
+            service_id: 1,
+            service_name: "ulululu".to_string(),
+            address: "127.0.0.1".to_string(),
+            flag: Some("ENOTESTFLAG".to_string()),
+            flag_index: 0,
+            round_id: 0,
+            related_round_id: 0,
+            timeout: 15000,
+            round_length: 60,
+            team_id: 1,
+            team_name: "TESTTEAM".to_string(),
+        }).unwrap();
+        println!("{}", req);
         let req = test::TestRequest::with_uri("/")
             .method(Method::POST)
             .set_json(&CheckerRequest {
