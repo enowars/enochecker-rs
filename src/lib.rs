@@ -4,7 +4,7 @@ use std::time::Duration;
 use actix_web::{web, App, HttpServer};
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
-//use tokio::task;
+use tokio::time::timeout;
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum CheckerError {
@@ -141,17 +141,15 @@ pub async fn check<C: Checker>(
         }
     };
 
-    let checker_result: CheckerResult = checker_result_fut.await;
-
-    // let checker_result: CheckerResult = match timeout(
-    //     Duration::from_millis(checker_request.timeout),
-    //     checker_result_fut,
-    // )
-    // .await
-    // {
-    //     Ok(checker_result) => checker_result,
-    //     Err(_) => Err(CheckerError::Mumble("Checker-Timeout!")),
-    // };
+    let checker_result: CheckerResult = match timeout(
+        Duration::from_millis(checker_request.timeout),
+        checker_result_fut,
+    )
+    .await
+    {
+        Ok(checker_result) => checker_result,
+        Err(_) => Err(CheckerError::Mumble("Checker-Timeout!")),
+    };
 
     web::Json(CheckerResponse::from(checker_result))
 }
@@ -337,7 +335,8 @@ mod user_tests {
         }
     }
 
-    #[actix_rt::test]
+    #[actix_web::main]
+    #[test]
     async fn test_setup() {
         let mut srv = actix_web::test::init_service(checker_app!(TestChecker)).await;
 
@@ -348,7 +347,8 @@ mod user_tests {
         println!("{:?}", test::read_body(resp).await);
     }
 
-    #[actix_rt::test]
+    #[actix_web::main]
+    #[test]
     async fn test_method_call() {
         let mut srv = actix_web::test::init_service(checker_app!(TestChecker)).await;
         
