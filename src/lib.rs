@@ -154,10 +154,10 @@ pub async fn check<C: Checker>(
     web::Json(CheckerResponse::from(checker_result))
 }
 
-// #[actix_web::get("/")]
-// pub async fn request_form() -> std::io::Result<actix_files::NamedFile> {
-//     Ok(actix_files::NamedFile::open("post.html")?)
-// }
+#[actix_web::get("/")]
+pub async fn request_form() -> HttpResponse {
+    HttpResponse::Ok().body(include_str!("post.html"))
+}
 
 pub async fn setup_checker<C>()
 where
@@ -167,7 +167,7 @@ where
         App::new()
             .route("/service", web::get().to(service_info::<C>))
             .route("/", web::post().to(check::<C>))
-            // .service( request_form)
+            .service( request_form)
     })
     .bind("0.0.0.0:3031")
     .expect("Failed to bind to socket")
@@ -186,7 +186,7 @@ macro_rules! checker_app {
                 actix_web::web::get().to($crate::service_info::<$C>),
             )
             .route("/", actix_web::web::post().to($crate::check::<$C>))
-            // .service($crate::request_form)
+            .service($crate::request_form)
     };
 }
 
