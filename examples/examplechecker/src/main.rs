@@ -1,4 +1,4 @@
-use enochecker::{Checker, CheckerRequest, CheckerResult, checker_app};
+use enochecker::{Checker, CheckerRequest, CheckerResult, CheckerError, checker_app};
 
 use async_trait::async_trait;
 use actix_web::HttpServer;
@@ -25,7 +25,7 @@ impl Checker for ExampleChecker {
     }
 
     async fn getnoise(checker_request: &CheckerRequest) -> CheckerResult {
-        Ok(())
+        Err(CheckerError::Mumble("This is supposed to be a message that hopefully wraps when displayed on the checker-website. I hope <pre></pre> elements automagically add line breaks, since I don't know what I'll do if they don't D:."))
     }
 
     async fn havoc(checker_request: &CheckerRequest) -> CheckerResult {

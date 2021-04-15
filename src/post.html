@@ -7,89 +7,94 @@
     <meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1.0' />
   </head>
   <body>
-    <header action="/" method="post" class='checker-form-header'>
-      <h1>{{SERVICENAME}}-Checker</h1>
-      <p><em>Try out your checker here!</em></p>
-    </header>
-    <div class="checker-form">
-      <form action="#" onsubmit="return checkertask_submit(event);">
-      <div class='form-row'>
-        <label for='method'>Method</label>
-        <select id='method' name='method'>
-          <option value='putflag'>putflag</option>
-          <option value='getflag'>getflag</option>
-          <option value='putnoise'>putnoise</option>
-          <option value='getnoise'>getnoise</option>
-          <option value='havoc'>havoc</option>
-          <option value='exploit'>exploit</option>
-        </select>
-      </div>
+    <div class='request_col'>
+      <header action="/" method="post" class='checker-form-header'>
+        <h1>{{SERVICENAME}}-Checker</h1>
+        <p><em>Try out your checker here!</em></p>
+      </header>
+      <div class="checker-form">
+        <form action="#" onsubmit="return checkertask_submit(event);">
+        <div class='form-row'>
+          <label for='method'>Method</label>
+          <select id='method' name='method'>
+            <option value='putflag'>putflag</option>
+            <option value='getflag'>getflag</option>
+            <option value='putnoise'>putnoise</option>
+            <option value='getnoise'>getnoise</option>
+            <option value='havoc'>havoc</option>
+            <option value='exploit'>exploit</option>
+          </select>
+        </div>
 
-      <div class='form-row'>
-        <label for='address'>Address</label>
-        <input id='address' name='address' type='text' value='localhost'/>
-      </div>
+        <div class='form-row'>
+          <label for='address'>Address</label>
+          <input id='address' name='address' type='text' value='localhost'/>
+        </div>
 
-      <div class='form-row'>
-        <label for='flag'>Flag</label>
-        <input id='flag' name='flag' type='text' value='ENOTESTFLAG'/>
-      </div>
+        <div class='form-row'>
+          <label for='flag'>Flag</label>
+          <input id='flag' name='flag' type='text' value='ENOTESTFLAG'/>
+        </div>
 
-      <div class='form-row'>
-        <label for='flagIndex'>FlagIndex</label>
-        <input id='flagIndex' name='flagIndex' type='number' value='1'/>
-      </div>
+        <div class='form-row'>
+          <label for='flagIndex'>FlagIndex</label>
+          <input id='flagIndex' name='flagIndex' type='number' value='1'/>
+        </div>
 
-      <div class='form-row'>
-        <label for='teamId'>TeamId</label>
-        <input id='teamId' name='teamId' type='number' value='1'/>
-      </div>
+        <div class='form-row'>
+          <label for='teamId'>TeamId</label>
+          <input id='teamId' name='teamId' type='number' value='1'/>
+        </div>
 
-      <div class='form-row'>
-        <label for='teamName'>Teamname</label>
-        <input id='teamName' name='teamName' type='text' value='TESTTEAM'/>
-      </div>
+        <div class='form-row'>
+          <label for='teamName'>Teamname</label>
+          <input id='teamName' name='teamName' type='text' value='TESTTEAM'/>
+        </div>
 
-      <div class='form-row'>
-        <label for='roundId'>RoundId</label>
-        <input id='roundId' name='roundId' type='number' value='1'/>
-      </div>
+        <div class='form-row'>
+          <label for='roundId'>RoundId</label>
+          <input id='roundId' name='roundId' type='number' value='1'/>
+        </div>
 
-      <div class='form-row'>
-        <label for='relatedRoundId'>RelatedRoundId</label>
-        <input id='relatedRoundId' name='relatedRoundId' type='number' value='1'/>
-      </div>
+        <div class='form-row'>
+          <label for='relatedRoundId'>RelatedRoundId</label>
+          <input id='relatedRoundId' name='relatedRoundId' type='number' value='1'/>
+        </div>
 
-      <div class='form-row'>
-        <label for='timeout'>Timeout [ms]</label>
-        <input id='timeout' name='timeout' type='number' value='15000'/>
-      </div>
+        <div class='form-row'>
+          <label for='timeout'>Timeout [ms]</label>
+          <input id='timeout' name='timeout' type='number' value='15000'/>
+        </div>
 
-      <div class='form-row'>
-        <label for='roundLength'>RoundLength [s]</label>
-        <input id='roundLength' name='roundLength' type='number' value='60'/>
-      </div>
+        <div class='form-row'>
+          <label for='roundLength'>RoundLength [s]</label>
+          <input id='roundLength' name='roundLength' type='number' value='60'/>
+        </div>
 
-      <div class='form-row'>
-        <label for='serviceId'>ServiceId</label>
-        <input id='serviceId' name='serviceId' type='number' value='1'/>
-      </div>
+        <div class='form-row'>
+          <label for='serviceId'>ServiceId</label>
+          <input id='serviceId' name='serviceId' type='number' value='1'/>
+        </div>
 
-      <div class='form-row'>
-        <label for='serviceName'>ServiceName</label>
-        <input id='serviceName' name='serviceName' type='text' value='{{SERVICENAME}}'/>
-      </div>
+        <div class='form-row'>
+          <label for='serviceName'>ServiceName</label>
+          <input id='serviceName' name='serviceName' type='text' value='{{SERVICENAME}}'/>
+        </div>
 
-      <div class='form-row'>
-        <label for='runId'>RunId</label>
-        <input id='runId' name='runId' type='number' value='1'/>
-      </div>
+        <div class='form-row'>
+          <label for='runId'>RunId</label>
+          <input id='runId' name='runId' type='number' value='1'/>
+        </div>
 
-      <div class='form-row'>
-        <input type='Submit' value='Check!'/>
+        <div class='form-row'>
+          <input type='Submit' value='Check!'/>
+        </div>
+        </form> 
+
+        <div class='form-row'>
+          <p class='pending-requests'></p> 
+        </div>
       </div>
-    </form> 
-    <p class='pending-requests'></p> 
     </div>
     <div id='responses-container' class='responses-container'>
       <h3> Responses </h3>
@@ -104,7 +109,7 @@
       function update_pending() {
         for (var pending_container of document.getElementsByClassName('pending-requests')) {
           if (checker_pending_requests == 0) {
-            pending_container.innerText = "";
+            pending_container.innerText = "No request pending";
           } else {
             pending_container.innerText = checker_pending_requests.toString() + " request(s) pending";
           }
@@ -199,7 +204,7 @@
       border: 1px solid #D6D9DC;
       border-radius: 3px;
       
-      width: 80%;
+      width: 100%;
       margin: 40px 0;
       padding: 50px;
     }
@@ -209,18 +214,23 @@
       margin-bottom: 20px;
     }
     
+    .responses-container,
+    .request_col {
+      width: 80%;
+    }
+
+    .responses-container,
     .checker-form {
       background-color: #F6F7F8;
       border: 1px solid #D6D9DC;
       border-radius: 3px;
       
-      width: 80%;
       padding: 50px;
       margin: 0 0 40px 0;
     }
     
     .form-row {
-      margin-bottom: 40px;
+      margin-bottom: 20px;
       display: flex;
       justify-content: flex-start;
       flex-direction: column;
@@ -238,7 +248,7 @@
     }
     
     .form-row label {
-      margin-bottom: 15px;
+      margin-bottom: 5px;
     }
     .form-row input[type='email'] {
       
@@ -337,10 +347,6 @@
     }
     
     @media only screen and (min-width: 700px) {
-      .checker-form-header,
-      .checker-form {
-        width: 600px;
-      }
       .form-row {
         flex-direction: row;
         align-items: flex-start; /* To avoid stretching */
@@ -390,6 +396,35 @@
       .form-row button {
         margin-left: 120px;
       }
+    }
+
+    @media only screen and (min-width: 700px) and (max-width: 1400px) {
+      .responses-container {
+        width: 600px;
+      }
+
+      .request_col {
+        width: 600px;
+      }
+    } 
+
+    @media only screen and (min-width: 1400px) {
+      body {
+        flex-direction: row;
+        justify-content: space-evenly;
+        align-items: flex-start;
+      }
+      .responses-container {
+        margin: 40px 0;
+        width: 40%;
+      }
+
+      .request_col {
+        width: 600px;
+      }
+    } 
+    pre {
+      white-space: pre-wrap;
     }
   </style>
   </body>
