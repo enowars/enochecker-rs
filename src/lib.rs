@@ -10,7 +10,7 @@ use tokio::time::timeout;
 pub enum CheckerError {
     Mumble(&'static str),
     Offline(&'static str),
-    InternalError,
+    InternalError(&'static str),
 }
 
 pub type CheckerResult = Result<(), CheckerError>;
@@ -119,16 +119,16 @@ impl From<CheckerResult> for CheckerResponse {
                 message: Some(msg.to_owned()),
             },
 
-            Err(CheckerError::InternalError) => CheckerResponse {
+            Err(CheckerError::InternalError(msg)) => CheckerResponse {
                 result: "INTERNAL_ERROR".to_owned(),
-                message: None,
+                message: Some(msg.to_owned()),
             },
         }
     }
 }
 
 pub async fn check<C: Checker>(
-    checker_request: web::Json<CheckerRequest>,
+    checker_request: web::Json<CheckerRequest>
 ) -> web::Json<CheckerResponse> {
     let checker_result_fut = match checker_request.method.as_str() {
         "putflag" => C::putflag(&checker_request),
@@ -167,7 +167,7 @@ where
         App::new()
             .route("/service", web::get().to(service_info::<C>))
             .route("/", web::post().to(check::<C>))
-            .route( "/", web::get().to(request_form::<C>))
+            .route("/", web::get().to(request_form::<C>))
     })
     .bind("0.0.0.0:3031")
     .expect("Failed to bind to socket")

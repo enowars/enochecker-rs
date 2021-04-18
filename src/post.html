@@ -5,182 +5,9 @@
     <title>{{SERVICENAME}}-Checker</title>
     <!-- <link rel='stylesheet' href='styles.css'/> -->
     <meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1.0' />
-  </head>
-  <body>
-    <div class='request_col'>
-      <header action="/" method="post" class='checker-form-header'>
-        <h1>{{SERVICENAME}}-Checker</h1>
-        <p><em>Try out your checker here!</em></p>
-      </header>
-      <div class="checker-form">
-        <form action="#" onsubmit="return checkertask_submit(event);">
-        <div class='form-row'>
-          <label for='method'>Method</label>
-          <select id='method' name='method'>
-            <option value='putflag'>putflag</option>
-            <option value='getflag'>getflag</option>
-            <option value='putnoise'>putnoise</option>
-            <option value='getnoise'>getnoise</option>
-            <option value='havoc'>havoc</option>
-            <option value='exploit'>exploit</option>
-          </select>
-        </div>
 
-        <div class='form-row'>
-          <label for='address'>Address</label>
-          <input id='address' name='address' type='text' value='localhost'/>
-        </div>
-
-        <div class='form-row'>
-          <label for='flag'>Flag</label>
-          <input id='flag' name='flag' type='text' value='ENOTESTFLAG'/>
-        </div>
-
-        <div class='form-row'>
-          <label for='flagIndex'>FlagIndex</label>
-          <input id='flagIndex' name='flagIndex' type='number' value='1'/>
-        </div>
-
-        <div class='form-row'>
-          <label for='teamId'>TeamId</label>
-          <input id='teamId' name='teamId' type='number' value='1'/>
-        </div>
-
-        <div class='form-row'>
-          <label for='teamName'>Teamname</label>
-          <input id='teamName' name='teamName' type='text' value='TESTTEAM'/>
-        </div>
-
-        <div class='form-row'>
-          <label for='roundId'>RoundId</label>
-          <input id='roundId' name='roundId' type='number' value='1'/>
-        </div>
-
-        <div class='form-row'>
-          <label for='relatedRoundId'>RelatedRoundId</label>
-          <input id='relatedRoundId' name='relatedRoundId' type='number' value='1'/>
-        </div>
-
-        <div class='form-row'>
-          <label for='timeout'>Timeout [ms]</label>
-          <input id='timeout' name='timeout' type='number' value='15000'/>
-        </div>
-
-        <div class='form-row'>
-          <label for='roundLength'>RoundLength [s]</label>
-          <input id='roundLength' name='roundLength' type='number' value='60'/>
-        </div>
-
-        <div class='form-row'>
-          <label for='serviceId'>ServiceId</label>
-          <input id='serviceId' name='serviceId' type='number' value='1'/>
-        </div>
-
-        <div class='form-row'>
-          <label for='serviceName'>ServiceName</label>
-          <input id='serviceName' name='serviceName' type='text' value='{{SERVICENAME}}'/>
-        </div>
-
-        <div class='form-row'>
-          <label for='runId'>RunId</label>
-          <input id='runId' name='runId' type='number' value='1'/>
-        </div>
-
-        <div class='form-row'>
-          <input type='Submit' value='Check!'/>
-        </div>
-        </form> 
-
-        <div class='form-row'>
-          <p class='pending-requests'></p> 
-        </div>
-      </div>
-    </div>
-    <div id='responses-container' class='responses-container'>
-      <h3> Responses </h3>
-      <div id='responses' class='responses'>
-      </div>
-    </div>
-    <script>
-      var checker_request_count = 0
-      var checker_pending_requests = 0
-      var checker_results = []
-
-      function update_pending() {
-        for (var pending_container of document.getElementsByClassName('pending-requests')) {
-          if (checker_pending_requests == 0) {
-            pending_container.innerText = "No request pending";
-          } else {
-            pending_container.innerText = checker_pending_requests.toString() + " request(s) pending";
-          }
-        }
-      }
-
-      function checkertask_submit(e) {
-        var started = Date.now();
-        e.preventDefault();
-        let formElement = document.querySelector("form");
-        let data = new FormData(formElement);
-
-        var object = {};
-        data.forEach(function(value, key){
-            object[key] = value;
-            let formfield = document.getElementById(key);
-            if (formfield instanceof HTMLInputElement) {
-              if (formfield.type == 'number') {
-                object[key] = parseInt(value)
-              }
-            }
-        });
-
-        var request_json = JSON.stringify(object);
-    
-        var xhr = new XMLHttpRequest();
-        xhr.open("POST", "/");
-        xhr.setRequestHeader("Content-Type", "application/json");
-        xhr.onload = xhr.onerror = function () {
-          console.log(xhr.responseText);
-          try {
-            obj = JSON.parse(xhr.responseText)
-            json_indented = JSON.stringify(obj, undefined, 4);
-          } catch (e) {
-            // Print raw response is JSON-parsing failed
-            json_indented = xhr.responseText;
-          }
-          var response_history = document.getElementById('responses');
-          var out_element = document.createElement('div');
-          out_element.classList.add('response-container');
-
-          var status_text = document.createElement('p');
-          status_text.append(
-            document.createTextNode(
-              "Request " + checker_request_count.toString() + " resulted after " + ((Date.now() - started)/1000) + " s in:"
-            )
-          );
-          
-          var response = document.createElement('pre');
-          response.append(
-            document.createTextNode(json_indented)
-          );
-          
-          out_element.append(status_text)
-          out_element.append(response)
-          
-          response_history.prepend(out_element)
-
-          checker_request_count++
-          checker_pending_requests--
-          update_pending();
-        }
-
-        xhr.send(request_json);
-        checker_pending_requests++;
-        update_pending();
-        return false;
-      }
-    </script>
-      <style>
-      * {
+    <style>
+    * {
       margin: 0;
       padding: 0;
       box-sizing: border-box;
@@ -206,7 +33,7 @@
       
       width: 100%;
       margin: 40px 0;
-      padding: 50px;
+      padding: 30px;
     }
     
     .checker-form-header h1 {
@@ -225,7 +52,7 @@
       border: 1px solid #D6D9DC;
       border-radius: 3px;
       
-      padding: 50px;
+      padding: 30px;
       margin: 0 0 40px 0;
     }
     
@@ -427,5 +254,180 @@
       white-space: pre-wrap;
     }
   </style>
+
+  </head>
+  <body>
+    <div class='request_col'>
+      <header action="/" method="post" class='checker-form-header'>
+        <h1>{{SERVICENAME}}-Checker</h1>
+        <p><em>Try out your checker here!</em></p>
+      </header>
+      <div class="checker-form">
+        <form action="#" onsubmit="return checkertask_submit(event);">
+        <div class='form-row'>
+          <label for='method'>Method</label>
+          <select id='method' name='method'>
+            <option value='putflag'>putflag</option>
+            <option value='getflag'>getflag</option>
+            <option value='putnoise'>putnoise</option>
+            <option value='getnoise'>getnoise</option>
+            <option value='havoc'>havoc</option>
+            <option value='exploit'>exploit</option>
+          </select>
+        </div>
+
+        <div class='form-row'>
+          <label for='address'>Address</label>
+          <input id='address' name='address' type='text' value='localhost'/>
+        </div>
+
+        <div class='form-row'>
+          <label for='flag'>Flag</label>
+          <input id='flag' name='flag' type='text' value='ENOTESTFLAG'/>
+        </div>
+
+        <div class='form-row'>
+          <label for='flagIndex'>FlagIndex</label>
+          <input id='flagIndex' name='flagIndex' type='number' value='1'/>
+        </div>
+
+        <div class='form-row'>
+          <label for='teamId'>TeamId</label>
+          <input id='teamId' name='teamId' type='number' value='1'/>
+        </div>
+
+        <div class='form-row'>
+          <label for='teamName'>Teamname</label>
+          <input id='teamName' name='teamName' type='text' value='TESTTEAM'/>
+        </div>
+
+        <div class='form-row'>
+          <label for='roundId'>RoundId</label>
+          <input id='roundId' name='roundId' type='number' value='1'/>
+        </div>
+
+        <div class='form-row'>
+          <label for='relatedRoundId'>RelatedRoundId</label>
+          <input id='relatedRoundId' name='relatedRoundId' type='number' value='1'/>
+        </div>
+
+        <div class='form-row'>
+          <label for='timeout'>Timeout [ms]</label>
+          <input id='timeout' name='timeout' type='number' value='15000'/>
+        </div>
+
+        <div class='form-row'>
+          <label for='roundLength'>RoundLength [s]</label>
+          <input id='roundLength' name='roundLength' type='number' value='60'/>
+        </div>
+
+        <div class='form-row'>
+          <label for='serviceId'>ServiceId</label>
+          <input id='serviceId' name='serviceId' type='number' value='1'/>
+        </div>
+
+        <div class='form-row'>
+          <label for='serviceName'>ServiceName</label>
+          <input id='serviceName' name='serviceName' type='text' value='{{SERVICENAME}}'/>
+        </div>
+
+        <div class='form-row'>
+          <label for='runId'>RunId</label>
+          <input id='runId' name='runId' type='number' value='1'/>
+        </div>
+
+        <div class='form-row'>
+          <input type='Submit' value='Check!'/>
+        </div>
+        </form> 
+
+        <div class='form-row'>
+          <p class='pending-requests'>No request pending</p> 
+        </div>
+      </div>
+    </div>
+    <div id='responses-container' class='responses-container'>
+      <h3> Responses </h3>
+      <div id='responses' class='responses'>
+      </div>
+    </div>
+    <script>
+      var checker_request_count = 0
+      var checker_pending_requests = 0
+      var checker_results = []
+
+      function update_pending() {
+        for (var pending_container of document.getElementsByClassName('pending-requests')) {
+          if (checker_pending_requests == 0) {
+            pending_container.innerText = "No request pending";
+          } else {
+            pending_container.innerText = checker_pending_requests.toString() + " request(s) pending";
+          }
+        }
+      }
+
+      function checkertask_submit(e) {
+        var started = Date.now();
+        e.preventDefault();
+        let formElement = document.querySelector("form");
+        let data = new FormData(formElement);
+
+        var object = {};
+        data.forEach(function(value, key){
+            object[key] = value;
+            let formfield = document.getElementById(key);
+            if (formfield instanceof HTMLInputElement) {
+              if (formfield.type == 'number') {
+                object[key] = parseInt(value)
+              }
+            }
+        });
+
+        var request_json = JSON.stringify(object);
+    
+        var xhr = new XMLHttpRequest();
+        xhr.open("POST", "/");
+        xhr.setRequestHeader("Content-Type", "application/json");
+        xhr.onload = xhr.onerror = function () {
+          console.log(xhr.responseText);
+          try {
+            obj = JSON.parse(xhr.responseText)
+            json_indented = JSON.stringify(obj, undefined, 4);
+          } catch (e) {
+            // Print raw response is JSON-parsing failed
+            json_indented = xhr.responseText;
+          }
+          var response_history = document.getElementById('responses');
+          var out_element = document.createElement('div');
+          out_element.classList.add('response-container');
+
+          var status_text = document.createElement('p');
+          status_text.append(
+            document.createTextNode(
+              "Request " + checker_request_count.toString() + " resulted after " + ((Date.now() - started)/1000) + " s in:"
+            )
+          );
+          
+          var response = document.createElement('pre');
+          response.append(
+            document.createTextNode(json_indented)
+          );
+          
+          out_element.append(status_text)
+          out_element.append(response)
+          
+          response_history.prepend(out_element)
+
+          checker_request_count++
+          checker_pending_requests--
+          update_pending();
+        }
+
+        xhr.send(request_json);
+        checker_pending_requests++;
+        update_pending();
+        return false;
+      }
+    </script>
   </body>
 </html>
