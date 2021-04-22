@@ -1,7 +1,6 @@
-use std::any::type_name;
 use std::time::Duration;
 
-use actix_web::{App, HttpRequest, HttpResponse, HttpServer, error::JsonPayloadError, web};
+use actix_web::{App, HttpResponse, HttpServer, error::JsonPayloadError, web};
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use tokio::time::timeout;
@@ -61,7 +60,7 @@ where
     C: Checker,
 {
     let body = web::Json(ServiceInfo {
-        service_name: type_name::<C>(),
+        service_name: C::SERVICE_NAME,
         flag_count: C::FLAG_COUNT,
         noise_count: C::NOISE_COUNT,
         havoc_count: C::HAVOC_COUNT,
@@ -154,7 +153,7 @@ pub async fn check<C: Checker>(
 
 pub async fn request_form<C>() -> HttpResponse
     where C: Checker {
-    HttpResponse::Ok().body(include_str!("post.html").replace("{{SERVICENAME}}", C::SERVICE_NAME))
+    HttpResponse::Ok().body(include_str!("post.html"))
 }
 
 pub fn handle_json_error(err: JsonPayloadError) -> actix_web::Error {
