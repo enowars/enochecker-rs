@@ -87,6 +87,18 @@
       font-size: 14px;
     }
     
+   .disabled {
+      color: #DCDAD1;
+    }
+    
+    .disabled * {
+      color: #DCDAD1;
+    }
+
+    .input[disabled] {
+      color: #DCDAD1;
+    }
+
     .form-row input[type='text']:invalid,
     .form-row input[type='email']:invalid {
       border: 1px solid #D55C5F;
@@ -287,8 +299,13 @@
         </div>
 
         <div class='form-row'>
-          <label for='flagIndex'>FlagIndex</label>
-          <input id='flagIndex' name='flagIndex' type='number' value='1'/>
+          <label for='variantId'>VariantId</label>
+          <input id='variantId' name='variantId' type='number' value='1'/>
+        </div>
+
+        <div class='form-row'>
+          <label for='uniqueVariantId'>UniqueVariantId</label>
+          <input id='uniqueVariantId' name='uniqueVariantId' type='number' value='1'/>
         </div>
 
         <div class='form-row'>
@@ -302,8 +319,8 @@
         </div>
 
         <div class='form-row'>
-          <label for='roundId'>RoundId</label>
-          <input id='roundId' name='roundId' type='number' value='1'/>
+          <label for='currentRoundId'>CurrentRoundId</label>
+          <input id='currentRoundId' name='currentRoundId' type='number' value='1'/>
         </div>
 
         <div class='form-row'>
@@ -317,23 +334,13 @@
         </div>
 
         <div class='form-row'>
-          <label for='roundLength'>RoundLength [s]</label>
-          <input id='roundLength' name='roundLength' type='number' value='60'/>
+          <label for='roundLength'>RoundLength [ms]</label>
+          <input id='roundLength' name='roundLength' type='number' value='60000'/>
         </div>
 
         <div class='form-row'>
-          <label for='serviceId'>ServiceId</label>
-          <input id='serviceId' name='serviceId' type='number' value='1'/>
-        </div>
-
-        <div class='form-row'>
-          <label for='serviceName'>ServiceName</label>
-          <input id='serviceName' name='serviceName' type='text' value='{{SERVICENAME}}'/>
-        </div>
-
-        <div class='form-row'>
-          <label for='runId'>RunId</label>
-          <input id='runId' name='runId' type='number' value='1'/>
+          <label for='taskId'>TaskId</label>
+          <input id='taskId' name='taskId' type='number' value='1'/>
         </div>
 
         <div class='form-row'>
@@ -355,6 +362,24 @@
       var checker_request_count = 0
       var checker_pending_requests = 0
       var checker_results = []
+
+      var method_selector = document.getElementById("method");
+
+      method_selector.onchange = function () {
+        if ( method_selector.selectedOptions[0].value === "putflag" 
+            || method_selector.selectedOptions[0].value === "getflag" ) {
+          
+          document.getElementById("flag").disabled = false;
+          var flag_row = document.getElementById("flag").parentNode;
+          flag_row.classList.remove("disabled");
+
+        } else {
+
+          document.getElementById("flag").disabled = true;
+          var flag_row = document.getElementById("flag").parentNode;
+          flag_row.classList.add("disabled");
+        }
+      }
 
       function update_pending() {
         for (var pending_container of document.getElementsByClassName('pending-requests')) {
@@ -383,8 +408,21 @@
             }
         });
 
+        let method_ident = {
+          "putflag": "flag",
+          "getflag": "flag",
+          "putnoise": "noise",
+          "getnoise": "noise",
+          "havoc": "havoc",
+          "exploit": "exploit",
+        }[object["method"]];
+
+        // We assume that we're the service with Id
+        object["taskChainId"] = `${method_ident}_s0_r${object["relatedRoundId"]}_t${object["teamId"]}_i${object["uniqueVariantId"]}`;
+        delete object["uniqueVariantId"]
+        
         var request_json = JSON.stringify(object);
-    
+
         var xhr = new XMLHttpRequest();
         xhr.open("POST", "/");
         xhr.setRequestHeader("Content-Type", "application/json");

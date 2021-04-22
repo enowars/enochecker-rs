@@ -1,7 +1,7 @@
 use std::any::type_name;
 use std::time::Duration;
 
-use actix_web::{web, App, HttpServer, HttpResponse};
+use actix_web::{App, HttpRequest, HttpResponse, HttpServer, error::JsonPayloadError, web};
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use tokio::time::timeout;
@@ -72,28 +72,26 @@ where
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct CheckerRequest {
-    #[serde(rename="runId")]
-    run_id: u64,
+    #[serde(rename="taskId")]
+    taskid: u64,
     method: String,
     address: String,
-    #[serde(rename="serviceId")]
-    service_id: u64,
-    #[serde(rename="serviceName")]
-    service_name: String,
     #[serde(rename="teamId")]
     team_id: u64,
     #[serde(rename="teamName")]
     team_name: String,
-    #[serde(rename="roundId")]
-    round_id: u64,
+    #[serde(rename="currentRoundId")]
+    current_round_id: u64,
     #[serde(rename="relatedRoundId")]
     related_round_id: u64,
     flag: Option<String>,
-    #[serde(rename="flagIndex")]
-    flag_index: u64,
+    #[serde(rename="variantId")]
+    variant_id: u64,
     timeout: u64,     // Timeout in miliseconds
     #[serde(rename="roundLength")]
     round_length: u64, // Round Length in seconds
+    #[serde(rename="taskChainId")]
+    task_chain_id: String, // Round Length in seconds
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -159,6 +157,13 @@ pub async fn request_form<C>() -> HttpResponse
     HttpResponse::Ok().body(include_str!("post.html").replace("{{SERVICENAME}}", C::SERVICE_NAME))
 }
 
+pub fn handle_json_error(err: JsonPayloadError) -> actix_web::Error {
+    match err {
+        JsonPayloadError::Overflow => HttpResponse::PayloadTooLarge(),
+        _ => HttpResponse::BadRequest(),
+    }.body(err.to_string()).into()
+}
+
 pub async fn setup_checker<C>()
 where
     C: Checker + 'static,
@@ -181,6 +186,13 @@ where
 macro_rules! checker_app {
     ($C:ty) => {
         actix_web::App::new()
+            .app_data(
+                actix_web::web::JsonConfig::default()
+                    .limit(4096)
+                    .error_handler(|err, req| {  // <- create custom error response
+                        $crate::handle_json_error(err)
+                    })
+            )
             .route(
                 "/service",
                 actix_web::web::get().to($crate::service_info::<$C>),
@@ -229,7 +241,7 @@ mod tests {
     #[test]
     fn test_ok_method() {
         let req = CheckerRequest {
-            run_id: 1,
+            task_id: 1,
             address: "127.0.0.1".to_string(),
             method: "putflag".to_string(),
             team_name: "ENOTESTTEAM".to_string(),
