@@ -1,7 +1,7 @@
-use enochecker::{Checker, CheckerRequest, CheckerResult, CheckerError, checker_app};
+use enochecker::{checker_app, Checker, CheckerError, CheckerRequest, CheckerResult};
 
-use async_trait::async_trait;
 use actix_web::HttpServer;
+use async_trait::async_trait;
 
 struct ExampleChecker;
 
@@ -35,8 +35,8 @@ impl Checker for ExampleChecker {
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    HttpServer::new(||{
-        checker_app!(ExampleChecker)
-    }
-    ).bind("0.0.0.0:3031")?.run().await
+    HttpServer::new(|| checker_app!(ExampleChecker))
+        .bind("0.0.0.0:3031")?
+        .run()
+        .await
 }

@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use actix_web::{App, HttpResponse, HttpServer, error::JsonPayloadError, web};
+use actix_web::{error::JsonPayloadError, web, App, HttpResponse, HttpServer};
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use tokio::time::timeout;
@@ -70,7 +70,7 @@ where
     body
 }
 
-#[serde(rename_all="camelCase")]
+#[serde(rename_all = "camelCase")]
 #[derive(Serialize, Deserialize, Debug)]
 pub struct CheckerRequest {
     task_id: u64,
@@ -82,8 +82,8 @@ pub struct CheckerRequest {
     related_round_id: u64,
     flag: Option<String>,
     variant_id: u64,
-    timeout: u64,     // Timeout in miliseconds
-    round_length: u64, // Round Length in seconds
+    timeout: u64,          // Timeout in miliseconds
+    round_length: u64,     // Round Length in seconds
     task_chain_id: String, // Round Length in seconds
 }
 
@@ -119,7 +119,7 @@ impl From<CheckerResult> for CheckerResponse {
 }
 
 pub async fn check<C: Checker>(
-    checker_request: web::Json<CheckerRequest>
+    checker_request: web::Json<CheckerRequest>,
 ) -> web::Json<CheckerResponse> {
     let checker_result_fut = match checker_request.method.as_str() {
         "putflag" => C::putflag(&checker_request),
@@ -146,7 +146,9 @@ pub async fn check<C: Checker>(
 }
 
 pub async fn request_form<C>() -> HttpResponse
-    where C: Checker {
+where
+    C: Checker,
+{
     HttpResponse::Ok().body(include_str!("post.html"))
 }
 
@@ -154,7 +156,9 @@ pub fn handle_json_error(err: JsonPayloadError) -> actix_web::Error {
     match err {
         JsonPayloadError::Overflow => HttpResponse::PayloadTooLarge(),
         _ => HttpResponse::BadRequest(),
-    }.body(err.to_string()).into()
+    }
+    .body(err.to_string())
+    .into()
 }
 
 pub async fn setup_checker<C>()
@@ -182,9 +186,10 @@ macro_rules! checker_app {
             .app_data(
                 actix_web::web::JsonConfig::default()
                     .limit(4096)
-                    .error_handler(|err, req| {  // <- create custom error response
+                    .error_handler(|err, req| {
+                        // <- create custom error response
                         $crate::handle_json_error(err)
-                    })
+                    }),
             )
             .route(
                 "/service",
@@ -242,7 +247,7 @@ mod tests {
 
             flag: Some("ENOTESTFLAG".to_string()),
             flag_index: 1,
-            
+
             service_id: 0,
             service_name: "TestService".to_string(),
 
@@ -267,7 +272,7 @@ mod tests {
 
             flag: Some("ENOTESTFLAG".to_string()),
             flag_index: 1,
-            
+
             service_id: 0,
             service_name: "TestService".to_string(),
 
@@ -292,7 +297,7 @@ mod tests {
 
             flag: Some("ENOTESTFLAG".to_string()),
             flag_index: 1,
-            
+
             service_id: 0,
             service_name: "TestService".to_string(),
 
@@ -320,7 +325,7 @@ mod user_tests {
 
     use actix_web::{self, test};
     use async_trait::async_trait;
-    
+
     use serde_json;
     struct TestChecker;
 
@@ -363,7 +368,7 @@ mod user_tests {
     #[test]
     async fn test_method_call() {
         let mut srv = actix_web::test::init_service(checker_app!(TestChecker)).await;
-        
+
         let request_data = serde_json::to_string_pretty(&CheckerRequest {
             run_id: 1,
             method: "putflag".to_string(),
@@ -394,7 +399,8 @@ mod user_tests {
             round_length: 60,
             team_id: 1,
             team_name: "TESTTEAM".to_string(),
-        }).unwrap();
+        })
+        .unwrap();
         println!("{}", req);
         let req = test::TestRequest::with_uri("/")
             .method(Method::POST)
@@ -444,7 +450,8 @@ mod user_tests {
         println!("{:?}", resp);
         let response_raw = test::read_body(resp).await;
         println!("{:?}", response_raw);
-        let response: CheckerResponse = serde_json::from_slice(&response_raw).expect("Failed to parse Response");
+        let response: CheckerResponse =
+            serde_json::from_slice(&response_raw).expect("Failed to parse Response");
         println!("{:?}", response);
         assert_eq!(response.result, "MUMBLE");
     }
