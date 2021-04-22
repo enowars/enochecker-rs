@@ -17,9 +17,9 @@ pub type CheckerResult = Result<(), CheckerError>;
 #[async_trait]
 pub trait Checker {
     const SERVICE_NAME: &'static str;
-    const FLAG_COUNT: u64;
-    const NOISE_COUNT: u64;
-    const HAVOC_COUNT: u64;
+    const FLAG_VARIANTS: u64;
+    const NOISE_VARIANTS: u64;
+    const HAVOC_VARIANTS: u64;
 
     // PUTFLAG/GETFLAG are required
     async fn putflag(checker_request: &CheckerRequest) -> CheckerResult;
@@ -47,12 +47,13 @@ pub trait Checker {
     }
 }
 
+#[serde(rename_all = "camelCase")]
 #[derive(Serialize, Debug)]
 pub struct ServiceInfo {
     service_name: &'static str,
-    flag_count: u64,
-    noise_count: u64,
-    havoc_count: u64,
+    flag_variants: u64,
+    noise_variants: u64,
+    havoc_variants: u64,
 }
 
 pub async fn service_info<C>() -> web::Json<ServiceInfo>
@@ -61,35 +62,28 @@ where
 {
     let body = web::Json(ServiceInfo {
         service_name: C::SERVICE_NAME,
-        flag_count: C::FLAG_COUNT,
-        noise_count: C::NOISE_COUNT,
-        havoc_count: C::HAVOC_COUNT,
+        flag_variants: C::FLAG_VARIANTS,
+        noise_variants: C::NOISE_VARIANTS,
+        havoc_variants: C::HAVOC_VARIANTS,
     });
 
     body
 }
 
+#[serde(rename_all="camelCase")]
 #[derive(Serialize, Deserialize, Debug)]
 pub struct CheckerRequest {
-    #[serde(rename="taskId")]
-    taskid: u64,
+    task_id: u64,
     method: String,
     address: String,
-    #[serde(rename="teamId")]
     team_id: u64,
-    #[serde(rename="teamName")]
     team_name: String,
-    #[serde(rename="currentRoundId")]
     current_round_id: u64,
-    #[serde(rename="relatedRoundId")]
     related_round_id: u64,
     flag: Option<String>,
-    #[serde(rename="variantId")]
     variant_id: u64,
     timeout: u64,     // Timeout in miliseconds
-    #[serde(rename="roundLength")]
     round_length: u64, // Round Length in seconds
-    #[serde(rename="taskChainId")]
     task_chain_id: String, // Round Length in seconds
 }
 

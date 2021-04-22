@@ -8,9 +8,9 @@ struct ExampleChecker;
 #[async_trait]
 impl Checker for ExampleChecker {
     const SERVICE_NAME: &'static str = "ExampleService";
-    const FLAG_COUNT: u64 = 1;
-    const NOISE_COUNT: u64 = 1;
-    const HAVOC_COUNT: u64 = 1;
+    const FLAG_VARIANTS: u64 = 1;
+    const NOISE_VARIANTS: u64 = 1;
+    const HAVOC_VARIANTS: u64 = 1;
 
     async fn putflag(checker_request: &CheckerRequest) -> CheckerResult {
         Ok(())
