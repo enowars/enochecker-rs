@@ -4,6 +4,9 @@ use actix_web::{error::JsonPayloadError, web, App, HttpResponse, HttpServer};
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use tokio::time::timeout;
+use deadpool_postgres::ClientWrapper;
+
+pub mod db_config;
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum CheckerError {
@@ -22,24 +25,24 @@ pub trait Checker {
     const HAVOC_VARIANTS: u64;
 
     // PUTFLAG/GETFLAG are required
-    async fn putflag(checker_request: &CheckerRequest) -> CheckerResult;
-    async fn getflag(checker_request: &CheckerRequest) -> CheckerResult;
+    async fn putflag(checker_request: &CheckerRequest, db_client: ClientWrapper) -> CheckerResult;
+    async fn getflag(checker_request: &CheckerRequest, db_client: ClientWrapper) -> CheckerResult;
 
-    async fn putnoise(_checker_request: &CheckerRequest) -> CheckerResult {
+    async fn putnoise(_checker_request: &CheckerRequest, db_client: ClientWrapper) -> CheckerResult {
         unimplemented!(
             "{:?} requested, but method is not implemented!",
             stringify!($func_name)
         );
     }
 
-    async fn getnoise(_checker_request: &CheckerRequest) -> CheckerResult {
+    async fn getnoise(_checker_request: &CheckerRequest, db_client: ClientWrapper) -> CheckerResult {
         unimplemented!(
             "{:?} requested, but method is not implemented!",
             stringify!($func_name)
         );
     }
 
-    async fn havoc(_checker_request: &CheckerRequest) -> CheckerResult {
+    async fn havoc(_checker_request: &CheckerRequest, db_client: ClientWrapper) -> CheckerResult {
         unimplemented!(
             "{:?} requested, but method is not implemented!",
             stringify!($func_name)
@@ -120,13 +123,23 @@ impl From<CheckerResult> for CheckerResponse {
 
 pub async fn check<C: Checker>(
     checker_request: web::Json<CheckerRequest>,
+    pool: web::Data<deadpool_postgres::Pool>,
 ) -> web::Json<CheckerResponse> {
+    let mut client = match pool.get().await {
+        Ok(client) => client,
+        Err(err) => {
+            println!("Database connection failed {:?}", err);
+            let result = Err(CheckerError::InternalError("Database connection failed!"));
+            return web::Json(CheckerResponse::from(result));
+        }
+    };
+
     let checker_result_fut = match checker_request.method.as_str() {
-        "putflag" => C::putflag(&checker_request),
-        "getflag" => C::getflag(&checker_request),
-        "putnoise" => C::putnoise(&checker_request),
-        "getnoise" => C::getnoise(&checker_request),
-        "havoc" => C::havoc(&checker_request),
+        "putflag" => C::putflag(&checker_request, client),
+        "getflag" => C::getflag(&checker_request, client),
+        "putnoise" => C::putnoise(&checker_request, client),
+        "getnoise" => C::getnoise(&checker_request, client),
+        "havoc" => C::havoc(&checker_request, client),
         _ => {
             unimplemented!();
         }
@@ -161,17 +174,17 @@ pub fn handle_json_error(err: JsonPayloadError) -> actix_web::Error {
     .into()
 }
 
-pub async fn setup_checker<C>()
-where
-    C: Checker + 'static,
+
+pub async fn run_checker<C: Checker>(checker: C, port: u16)
 {
-    let server = HttpServer::new(|| {
+    let server = HttpServer::new(move || {
         App::new()
+            .data(std::sync::Arc::new(checker))
             .route("/service", web::get().to(service_info::<C>))
             .route("/", web::post().to(check::<C>))
             .route("/", web::get().to(request_form::<C>))
     })
-    .bind("0.0.0.0:3031")
+    .bind(format!("0.0.0.0:{}", port))
     .expect("Failed to bind to socket")
     .run()
     .await;
@@ -181,8 +194,12 @@ where
 
 #[macro_export]
 macro_rules! checker_app {
-    ($C:ty) => {
+    ($C:ty) => {{
+        let config = $crate::db_config::Config::from_env().unwrap();
+        let pool = config.pg.create_pool(tokio_postgres::NoTls).unwrap();
+
         actix_web::App::new()
+            .data(pool.clone())
             .app_data(
                 actix_web::web::JsonConfig::default()
                     .limit(4096)
@@ -197,8 +214,26 @@ macro_rules! checker_app {
             )
             .route("/", actix_web::web::post().to($crate::check::<$C>))
             .route("/", actix_web::web::get().to($crate::request_form::<$C>))
-    };
+    }};
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 #[cfg(test)]
 mod tests {
@@ -456,3 +491,5 @@ mod user_tests {
         assert_eq!(response.result, "MUMBLE");
     }
 }
+
+
