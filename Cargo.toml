@@ -7,16 +7,9 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-config = "*"
 futures = "*"
 serde = "*"
 serde_json = "*"
 actix-web = "^4.0.0-beta.5"
 tokio = "*"
 async-trait = "0.1.48"
-tokio-postgres = "*"
-deadpool-postgres = "0.7.0"
-
-[[example]]
-name = "checker"
-path = "examples/examplechecker/src/main.rs"
