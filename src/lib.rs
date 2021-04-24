@@ -48,8 +48,8 @@ pub trait Checker : Sync + Send + 'static {
     }
 }
 
-#[serde(rename_all = "camelCase")]
 #[derive(Serialize, Debug)]
+#[serde(rename_all = "camelCase")]
 pub struct ServiceInfo {
     service_name: &'static str,
     flag_variants: u64,
@@ -69,8 +69,8 @@ where
     })
 }
 
-#[serde(rename_all = "camelCase")]
 #[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
 pub struct CheckerRequest {
     pub task_id: u64,
     pub method: String,
@@ -160,6 +160,18 @@ fn handle_json_error(err: &JsonPayloadError) -> actix_web::Error {
 }
 
 
+/// Starts the Checker on the given port
+/// 
+/// # Arguments
+/// 
+/// * `checker` a instance of struct struct that implements the Checker-Trait
+/// * `port`the port to be bound by the Checker-Webserver
+///
+/// # Errors
+///
+/// This Function retuns an Error if sometheing related to the `HttpServer` fails.
+/// These mainly include requesting an invalid (or already occupied) port,
+/// or a misconfiguration of the Actix runtime. 
 pub async fn run_checker<C: Checker>(checker: C, port: u16) -> std::io::Result<()> {
     let checker = Arc::new(checker);
     HttpServer::new(move || {
@@ -177,8 +189,7 @@ pub async fn run_checker<C: Checker>(checker: C, port: u16) -> std::io::Result<(
             .route("/", web::get().to(request_form::<C>))
             .route("/service", web::get().to(service_info::<C>))
     })
-    .bind(format!("0.0.0.0:{}", port))
-    .expect("Failed to bind to socket")
+    .bind(format!("0.0.0.0:{}", port))?
     .run()
     .await
 }

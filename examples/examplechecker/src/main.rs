@@ -58,7 +58,7 @@ impl Checker for ExampleChecker {
                 ExampleServiceUser {
                     username: "penis".to_owned(),
                     password: "1234".to_owned(),
-                    unique_id: checker_request.task_chain_id.to_owned(),
+                    unique_id: checker_request.task_chain_id.clone(),
                 },
                 None,
             )
@@ -68,7 +68,7 @@ impl Checker for ExampleChecker {
     }
 
     async fn getflag(&self, checker_request: &CheckerRequest) -> CheckerResult {
-        let foo: ExampleServiceUser = self
+        let _foo: ExampleServiceUser = self
             .db
             .database("daw")
             .collection("dawdw")
@@ -79,15 +79,15 @@ impl Checker for ExampleChecker {
         Ok(())
     }
 
-    async fn putnoise(&self, checker_request: &CheckerRequest) -> CheckerResult {
+    async fn putnoise(&self, _checker_request: &CheckerRequest) -> CheckerResult {
         Ok(())
     }
 
-    async fn getnoise(&self, checker_request: &CheckerRequest) -> CheckerResult {
+    async fn getnoise(&self, _checker_request: &CheckerRequest) -> CheckerResult {
         Err(CheckerError::Mumble("This is supposed to be a message that hopefully wraps when displayed on the checker-website. I hope <pre></pre> elements automagically add line breaks, since I don't know what I'll do if they don't D:."))
     }
 
-    async fn havoc(&self, checker_request: &CheckerRequest) -> CheckerResult {
+    async fn havoc(&self, _checker_request: &CheckerRequest) -> CheckerResult {
         Ok(())
     }
 }
