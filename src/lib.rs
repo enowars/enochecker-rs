@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 use tokio::time::timeout;
 use std::sync::Arc;
 
+use tracing::field;
 use tracing_subscriber::{Registry, EnvFilter};
 use tracing_subscriber::layer::SubscriberExt;
 
@@ -128,11 +129,24 @@ async fn check<C: Checker>(
     checker: web::Data<Arc<C>>,
 ) -> web::Json<CheckerResponse> {
 
-    let _check_span = tracing::error_span!(
+    let check_span = tracing::error_span!(
         "Running Check",
-        method = %checker_request.method,
-        current_round = %checker_request.current_round_id,
-    ).entered();
+        method = checker_request.method.as_str(),
+        task_id = checker_request.task_id,
+        
+        team_id = checker_request.team_id,
+        team_name = checker_request.team_name.as_str(),
+        current_round = checker_request.current_round_id,
+        related_round_id = checker_request.related_round_id,
+        flag = field::Empty,
+        variant_id = checker_request.variant_id,
+        task_chain_id = checker_request.task_chain_id.as_str(),
+    );
+
+    if let Some(flag) = checker_request.flag.as_ref() {
+        check_span.record("flag", &flag.as_str());
+    }
+    let _check = check_span.entered();
 
     let checker_result_fut = match checker_request.method.as_str() {
         "putflag" => checker.putflag(&checker_request),
@@ -187,10 +201,9 @@ fn handle_json_error(err: &JsonPayloadError) -> actix_web::Error {
 pub async fn run_checker<C: Checker>(checker: C, port: u16) -> std::io::Result<()> {
     //let _trace_subscriber = tracing_subscriber::fmt::SubscriberBuilder::default().json().try_init();    
     let (non_blocking_writer, _guard) = tracing_appender::non_blocking(std::io::stdout());
-    let bunyan_formatting_layer = crate::enologmessage_formatting_layer::BunyanFormattingLayer::new(C::SERVICE_NAME.to_owned() + "Checker", non_blocking_writer);
+    let eno_formatter = crate::enologmessage_formatting_layer::EnoLogmessageLayer::new(C::SERVICE_NAME, non_blocking_writer);
     let subscriber = Registry::default()
-        .with(tracing_bunyan_formatter::JsonStorageLayer)
-        .with(bunyan_formatting_layer);
+        .with(eno_formatter);
     tracing::subscriber::set_global_default(subscriber).unwrap();
 
     let checker = Arc::new(checker);

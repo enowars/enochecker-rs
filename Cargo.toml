@@ -15,6 +15,5 @@ tokio = "*"
 async-trait = "0.1.48"
 tracing = "*"
 tracing-appender = "*"
-tracing-bunyan-formatter = "*"
 tracing-core = "*"
-tracing-subscriber = { version = "*", features = ["fmt", "json"] }
+tracing-subscriber = { version = "*", features = ["fmt", "chrono"] }
