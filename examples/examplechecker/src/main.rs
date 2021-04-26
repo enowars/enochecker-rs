@@ -8,6 +8,8 @@ use mongodb::{
     Client,
 };
 
+use tracing::info;
+
 struct ExampleChecker {
     db: Client,
 }
@@ -80,6 +82,7 @@ impl Checker for ExampleChecker {
     }
 
     async fn putnoise(&self, _checker_request: &CheckerRequest) -> CheckerResult {
+        info!("PUTNOISE LOGGING");
         Ok(())
     }
 
@@ -94,5 +97,5 @@ impl Checker for ExampleChecker {
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    run_checker(ExampleChecker::new().await, 3031).await
+    run_checker(ExampleChecker::new().await, 19321).await
 }

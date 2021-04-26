@@ -6,6 +6,11 @@ use serde::{Deserialize, Serialize};
 use tokio::time::timeout;
 use std::sync::Arc;
 
+use tracing_subscriber::{Registry, EnvFilter};
+use tracing_subscriber::layer::SubscriberExt;
+
+mod enologmessage_formatting_layer;
+
 #[derive(Debug, PartialEq, Eq)]
 pub enum CheckerError {
     Mumble(&'static str),
@@ -117,10 +122,17 @@ impl From<CheckerResult> for CheckerResponse {
     }
 }
 
+
 async fn check<C: Checker>(
     checker_request: web::Json<CheckerRequest>,
     checker: web::Data<Arc<C>>,
 ) -> web::Json<CheckerResponse> {
+
+    let _check_span = tracing::error_span!(
+        "Running Check",
+        method = %checker_request.method,
+        current_round = %checker_request.current_round_id,
+    ).entered();
 
     let checker_result_fut = match checker_request.method.as_str() {
         "putflag" => checker.putflag(&checker_request),
@@ -173,6 +185,14 @@ fn handle_json_error(err: &JsonPayloadError) -> actix_web::Error {
 /// These mainly include requesting an invalid (or already occupied) port,
 /// or a misconfiguration of the Actix runtime. 
 pub async fn run_checker<C: Checker>(checker: C, port: u16) -> std::io::Result<()> {
+    //let _trace_subscriber = tracing_subscriber::fmt::SubscriberBuilder::default().json().try_init();    
+    let (non_blocking_writer, _guard) = tracing_appender::non_blocking(std::io::stdout());
+    let bunyan_formatting_layer = crate::enologmessage_formatting_layer::BunyanFormattingLayer::new(C::SERVICE_NAME.to_owned() + "Checker", non_blocking_writer);
+    let subscriber = Registry::default()
+        .with(tracing_bunyan_formatter::JsonStorageLayer)
+        .with(bunyan_formatting_layer);
+    tracing::subscriber::set_global_default(subscriber).unwrap();
+
     let checker = Arc::new(checker);
     HttpServer::new(move || {
         App::new()
