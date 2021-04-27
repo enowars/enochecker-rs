@@ -78,7 +78,7 @@ impl Visit for EnoLogmessageStorage<'_> {
     }
 }
 
-const MESSAGE_TYPE: &'static str = "infrastructure";
+const MESSAGE_TYPE: &str = "infrastructure";
 
 pub struct EnoLogmessageLayer<W: MakeWriter + 'static> {
     make_writer: W,
@@ -155,6 +155,7 @@ impl<W: MakeWriter + 'static> EnoLogmessageLayer<W> {
 }
 
 /// The type of record we are dealing with: entering a span, exiting a span, an event.
+#[allow(dead_code)]
 #[derive(Clone, Debug)]
 pub enum Type {
     EnterSpan,
@@ -175,10 +176,10 @@ impl fmt::Display for Type {
 
 /// Ensure consistent formatting of the span context.
 ///
-/// Example: "[AN_INTERESTING_SPAN - START]"
+/// Example: `[AN_INTERESTING_SPAN - START]`
 fn format_span_context<S: Subscriber + for<'a> tracing_subscriber::registry::LookupSpan<'a>>(
     span: &SpanRef<S>,
-    ty: Type,
+    ty: &Type,
 ) -> String {
     format!("[{} - {}]", span.metadata().name().to_uppercase(), ty)
 }
@@ -186,7 +187,7 @@ fn format_span_context<S: Subscriber + for<'a> tracing_subscriber::registry::Loo
 /// Ensure consistent formatting of event message.
 ///
 /// Examples:
-/// - "[AN_INTERESTING_SPAN - EVENT] My event message" (for an event with a parent span)
+/// - `[AN_INTERESTING_SPAN - EVENT] My event message` (for an event with a parent span)
 /// - "My event message" (for an event without a parent span)
 fn format_event_message<S: Subscriber + for<'a> tracing_subscriber::registry::LookupSpan<'a>>(
     current_span: &Option<SpanRef<S>>,
@@ -197,17 +198,16 @@ fn format_event_message<S: Subscriber + for<'a> tracing_subscriber::registry::Lo
     let mut message = event_visitor
         .values()
         .get("message")
-        .map(|v| match v {
+        .and_then(|v| match v {
             Value::String(s) => Some(s.as_str()),
             _ => None,
         })
-        .flatten()
         .unwrap_or_else(|| event.metadata().target())
         .to_owned();
 
     // If the event is in the context of a span, prepend the span name to the message.
     if let Some(span) = &current_span {
-        message = format!("{} {}", format_span_context(span, Type::Event), message);
+        message = format!("{} {}", format_span_context(span, &Type::Event), message);
     }
 
     message
@@ -232,13 +232,13 @@ fn to_camel_case(field: &str) -> String {
 }
 
 /// Convert from log levels to Bunyan's levels.
-fn level_numeric(level: &Level) -> u16 {
+fn level_numeric(level: Level) -> u16 {
     match level {
-        &Level::ERROR => 50,
-        &Level::WARN => 40,
-        &Level::INFO => 30,
-        &Level::DEBUG => 20,
-        &Level::TRACE => 10,
+        Level::ERROR => 50,
+        Level::WARN => 40,
+        Level::INFO => 30,
+        Level::DEBUG => 20,
+        Level::TRACE => 10,
     }
 }
 
@@ -290,7 +290,7 @@ where
                 map_serializer.serialize_entry("function", &function)?;
             }
             map_serializer.serialize_entry("serverity", &metadata.level().to_string())?;
-            map_serializer.serialize_entry("severityLevel", &level_numeric(&metadata.level()))?;
+            map_serializer.serialize_entry("severityLevel", &level_numeric(*metadata.level()))?;
 
             let mut timestamp = String::new();
             self.timer
@@ -314,7 +314,7 @@ where
 
         let result: std::io::Result<Vec<u8>> = format();
         if let Ok(formatted) = result {
-            let _ = self.emit(&formatted);
+            let _result = self.emit(&formatted);
         }
     }
 
@@ -340,18 +340,19 @@ where
         let span = ctx.span(id).expect("Span not found, this is a bug");
         // eprintln!("PARENT: {:?}", span.parent_id());
         // We want to inherit the fields from the parent span, if there is one.
-        let mut visitor = if let Some(parent_span) = span.parent() {
-            // Extensions can be used to associate arbitrary data to a span.
-            // We'll use it to store our representation of its fields.
-            // We create a copy of the parent visitor!
-            let mut extensions = parent_span.extensions_mut();
-            extensions
-                .get_mut::<EnoLogmessageStorage>()
-                .map(|v| v.to_owned())
-                .unwrap_or_default()
-        } else {
-            EnoLogmessageStorage::default()
-        };
+        let mut visitor: EnoLogmessageStorage = span.parent().map_or_else(
+            EnoLogmessageStorage::default,
+            |parent_span| {
+                // Extensions can be used to associate arbitrary data to a span.
+                // We'll use it to store our representation of its fields.
+                // We create a copy of the parent visitor!
+                let mut extensions = parent_span.extensions_mut();
+                extensions
+                    .get_mut::<EnoLogmessageStorage>()
+                    .map(|v| v.clone())
+                    .unwrap_or_default()
+            },
+        );
 
         let mut extensions = span.extensions_mut();
 
@@ -365,12 +366,12 @@ where
     }
 
     /// When we enter a span **for the first time** save the timestamp in its extensions.
-    fn on_enter(&self, span: &Id, ctx: Context<'_, S>) {
+    fn on_enter(&self, _span: &Id, _ctx: Context<'_, S>) {
         // eprintln!("ENTER {:?}", span);
         // TODO: LOG SPAN ENTER?
     }
 
-    fn on_close(&self, id: Id, ctx: Context<'_, S>) {
+    fn on_close(&self, _id: Id, _ctx: Context<'_, S>) {
         // let span = ctx.span(&id).expect("Span not found, this is a bug");
         // if let Ok(serialized) = self.serialize_span(&span, Type::ExitSpan) {
         //     let _ = self.emit(serialized);

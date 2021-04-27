@@ -1,10 +1,6 @@
 use std::time::Duration;
 
-use actix_web::{
-    error::JsonPayloadError,
-    web,
-    App, HttpResponse, HttpServer,
-};
+use actix_web::{error::JsonPayloadError, web, App, HttpResponse, HttpServer};
 pub use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
@@ -12,7 +8,7 @@ use tokio::time::timeout;
 
 use tracing::{field, trace_span, Instrument};
 use tracing_subscriber::layer::SubscriberExt;
-use tracing_subscriber::{EnvFilter, Registry};
+use tracing_subscriber::Registry;
 
 mod enologmessage_formatting_layer;
 
@@ -170,7 +166,8 @@ async fn check<C: Checker>(
             > = Box::pin(async { Err(CheckerError::InternalError("Invalid method")) });
             fut.instrument(trace_span!(parent: &check_span, "INVALID!"))
         }
-    }.instrument(check_span);
+    }
+    .instrument(check_span);
 
     let checker_result: CheckerResult = match timeout(
         Duration::from_millis(checker_request.timeout),
@@ -218,7 +215,7 @@ pub async fn run_checker<C: Checker>(checker: C, port: u16) -> std::io::Result<(
         non_blocking_writer,
     );
     let subscriber = Registry::default().with(eno_formatter);
-    tracing::subscriber::set_global_default(subscriber).unwrap();
+    tracing::subscriber::set_global_default(subscriber).expect("Failed to set logging subscriber");
 
     let checker = Arc::new(checker);
     HttpServer::new(move || {
