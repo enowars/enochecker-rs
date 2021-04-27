@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use actix_web::{
     error::JsonPayloadError,
-    web::,
+    web,
     App, HttpResponse, HttpServer,
 };
 pub use async_trait::async_trait;
