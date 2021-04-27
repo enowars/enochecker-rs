@@ -1,4 +1,3 @@
-
 // use crate::storage_layer::JsonStorage;
 use serde::ser::{SerializeMap, Serializer};
 use serde_json::Value;
@@ -6,13 +5,13 @@ use serde_json::Value;
 use std::collections::HashMap;
 use std::fmt;
 use std::io::Write;
-use tracing::{Event, Id, Subscriber, span::Record};
+use tracing::field::{Field, Visit};
+use tracing::{span::Record, Event, Id, Subscriber};
 use tracing_core::metadata::Level;
 use tracing_core::span::Attributes;
-use tracing::field::{Field, Visit};
+use tracing_subscriber::fmt::time::{ChronoUtc, FormatTime};
 use tracing_subscriber::fmt::MakeWriter;
 use tracing_subscriber::layer::Context;
-use tracing_subscriber::fmt::time::{ChronoUtc, FormatTime};
 use tracing_subscriber::registry::SpanRef;
 use tracing_subscriber::Layer;
 
@@ -146,7 +145,7 @@ impl<W: MakeWriter + 'static> EnoLogmessageLayer<W> {
 
     fn emit(&self, buffer: &[u8]) -> Result<(), std::io::Error> {
         let mut writer = self.make_writer.make_writer();
-        
+
         let mut message = b"##ENOLOGMESSAGE ".to_vec();
         message.write_all(&buffer)?;
         message.write_all(b"\n")?;
@@ -216,7 +215,7 @@ fn format_event_message<S: Subscriber + for<'a> tracing_subscriber::registry::Lo
 
 fn to_camel_case(field: &str) -> String {
     let mut buffer = String::with_capacity(field.len());
-    
+
     let mut capitalization = false;
     for c in field.chars() {
         if c == '_' {
@@ -242,7 +241,6 @@ fn level_numeric(level: &Level) -> u16 {
         &Level::TRACE => 10,
     }
 }
-
 
 impl<S, W> Layer<S> for EnoLogmessageLayer<W>
 where
@@ -280,13 +278,13 @@ where
             {
                 map_serializer.serialize_entry(&to_camel_case(&key), value)?;
             }
-            
+
             let metadata = event.metadata();
             map_serializer.serialize_entry("module", &metadata.module_path())?;
             if let Some(file) = metadata.file() {
                 let function = match metadata.line() {
                     Some(line) => format!("{}:{}", file, line),
-                    None => file.to_owned()
+                    None => file.to_owned(),
                 };
 
                 map_serializer.serialize_entry("function", &function)?;
@@ -295,7 +293,9 @@ where
             map_serializer.serialize_entry("severityLevel", &level_numeric(&metadata.level()))?;
 
             let mut timestamp = String::new();
-            self.timer.format_time(&mut timestamp).expect("Failed to format time");
+            self.timer
+                .format_time(&mut timestamp)
+                .expect("Failed to format time");
             map_serializer.serialize_entry("timestamp", &timestamp)?;
 
             // Add all the fields from the current span, if we have one.
@@ -360,7 +360,7 @@ where
         // Associate the visitor with the Span for future usage via the Span's extensions
         extensions.insert(visitor);
 
-        //eprintln!("NEW: {:?}, ID: {:?}", attrs, id);
+        eprintln!("NEW: {:?}, ID: {:?}", attrs, id);
     }
 
     /// When we enter a span **for the first time** save the timestamp in its extensions.
@@ -368,7 +368,6 @@ where
         // eprintln!("ENTER {:?}", span);
         // TODO: LOG SPAN ENTER?
     }
-
 
     fn on_close(&self, id: Id, ctx: Context<'_, S>) {
         // let span = ctx.span(&id).expect("Span not found, this is a bug");

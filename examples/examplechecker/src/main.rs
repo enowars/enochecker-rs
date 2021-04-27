@@ -1,5 +1,4 @@
-use async_trait::async_trait;
-use enochecker::{run_checker, Checker, CheckerError, CheckerRequest, CheckerResult};
+use enochecker::{async_trait, run_checker, Checker, CheckerError, CheckerRequest, CheckerResult};
 use serde::{Deserialize, Serialize};
 
 use mongodb::{
@@ -8,7 +7,7 @@ use mongodb::{
     Client,
 };
 
-use tracing::info;
+use tracing::{debug, info, warn};
 
 struct ExampleChecker {
     db: Client,
@@ -82,7 +81,9 @@ impl Checker for ExampleChecker {
     }
 
     async fn putnoise(&self, _checker_request: &CheckerRequest) -> CheckerResult {
-        info!("PUTNOISE LOGGING");
+        warn!("(WARN) PUTNOISE LOGGING");
+        info!("(INFO) PUTNOISE LOGGING");
+        debug!("(DBUG) PUTNOISE LOGGING");
         Ok(())
     }
 

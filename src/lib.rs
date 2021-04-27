@@ -1,14 +1,18 @@
 use std::time::Duration;
 
-use actix_web::{error::JsonPayloadError, web, App, HttpResponse, HttpServer};
-use async_trait::async_trait;
+use actix_web::{
+    error::JsonPayloadError,
+    web::,
+    App, HttpResponse, HttpServer,
+};
+pub use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
-use tokio::time::timeout;
 use std::sync::Arc;
+use tokio::time::timeout;
 
-use tracing::field;
-use tracing_subscriber::{Registry, EnvFilter};
+use tracing::{field, trace_span, Instrument};
 use tracing_subscriber::layer::SubscriberExt;
+use tracing_subscriber::{EnvFilter, Registry};
 
 mod enologmessage_formatting_layer;
 
@@ -22,7 +26,7 @@ pub enum CheckerError {
 pub type CheckerResult = Result<(), CheckerError>;
 
 #[async_trait]
-pub trait Checker : Sync + Send + 'static {
+pub trait Checker: Sync + Send + 'static {
     const SERVICE_NAME: &'static str;
     const FLAG_VARIANTS: u64;
     const NOISE_VARIANTS: u64;
@@ -87,9 +91,9 @@ pub struct CheckerRequest {
     pub related_round_id: u64,
     pub flag: Option<String>,
     pub variant_id: u64,
-    pub timeout: u64,          // Timeout in ms
-    pub round_length: u64,     // Round Length in ms
-    pub task_chain_id: String, 
+    pub timeout: u64,      // Timeout in ms
+    pub round_length: u64, // Round Length in ms
+    pub task_chain_id: String,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -123,17 +127,14 @@ impl From<CheckerResult> for CheckerResponse {
     }
 }
 
-
 async fn check<C: Checker>(
     checker_request: web::Json<CheckerRequest>,
     checker: web::Data<Arc<C>>,
 ) -> web::Json<CheckerResponse> {
-
-    let check_span = tracing::error_span!(
+    let check_span = tracing::trace_span!(
         "Running Check",
         method = checker_request.method.as_str(),
         task_id = checker_request.task_id,
-        
         team_id = checker_request.team_id,
         team_name = checker_request.team_name.as_str(),
         current_round = checker_request.current_round_id,
@@ -146,18 +147,30 @@ async fn check<C: Checker>(
     if let Some(flag) = checker_request.flag.as_ref() {
         check_span.record("flag", &flag.as_str());
     }
-    let _check = check_span.entered();
 
     let checker_result_fut = match checker_request.method.as_str() {
-        "putflag" => checker.putflag(&checker_request),
-        "getflag" => checker.getflag(&checker_request),
-        "putnoise" => checker.putnoise(&checker_request),
-        "getnoise" => checker.getnoise(&checker_request),
-        "havoc" =>  checker.havoc(&checker_request),
+        "putflag" => checker
+            .putflag(&checker_request)
+            .instrument(trace_span!("PUTFLAG")),
+        "getflag" => checker
+            .getflag(&checker_request)
+            .instrument(trace_span!("GETFLAG")),
+        "putnoise" => checker
+            .putnoise(&checker_request)
+            .instrument(trace_span!("PUTNOISE")),
+        "getnoise" => checker
+            .getnoise(&checker_request)
+            .instrument(trace_span!("GETNOISE")),
+        "havoc" => checker
+            .havoc(&checker_request)
+            .instrument(trace_span!("HAVOC")),
         _ => {
-            unimplemented!();
+            let fut: std::pin::Pin<
+                Box<dyn futures::Future<Output = Result<(), CheckerError>> + Send>,
+            > = Box::pin(async { Err(CheckerError::InternalError("Invalid method")) });
+            fut.instrument(trace_span!("INVALID!"))
         }
-    };
+    }.instrument(check_span);
 
     let checker_result: CheckerResult = match timeout(
         Duration::from_millis(checker_request.timeout),
@@ -185,11 +198,10 @@ fn handle_json_error(err: &JsonPayloadError) -> actix_web::Error {
     .into()
 }
 
-
 /// Starts the Checker on the given port
-/// 
+///
 /// # Arguments
-/// 
+///
 /// * `checker` a instance of struct struct that implements the Checker-Trait
 /// * `port`the port to be bound by the Checker-Webserver
 ///
@@ -197,13 +209,15 @@ fn handle_json_error(err: &JsonPayloadError) -> actix_web::Error {
 ///
 /// This Function retuns an Error if sometheing related to the `HttpServer` fails.
 /// These mainly include requesting an invalid (or already occupied) port,
-/// or a misconfiguration of the Actix runtime. 
+/// or a misconfiguration of the Actix runtime.
 pub async fn run_checker<C: Checker>(checker: C, port: u16) -> std::io::Result<()> {
-    //let _trace_subscriber = tracing_subscriber::fmt::SubscriberBuilder::default().json().try_init();    
+    //let _trace_subscriber = tracing_subscriber::fmt::SubscriberBuilder::default().json().try_init();
     let (non_blocking_writer, _guard) = tracing_appender::non_blocking(std::io::stdout());
-    let eno_formatter = crate::enologmessage_formatting_layer::EnoLogmessageLayer::new(C::SERVICE_NAME, non_blocking_writer);
-    let subscriber = Registry::default()
-        .with(eno_formatter);
+    let eno_formatter = crate::enologmessage_formatting_layer::EnoLogmessageLayer::new(
+        C::SERVICE_NAME,
+        non_blocking_writer,
+    );
+    let subscriber = Registry::default().with(eno_formatter);
     tracing::subscriber::set_global_default(subscriber).unwrap();
 
     let checker = Arc::new(checker);
@@ -367,5 +381,3 @@ pub async fn run_checker<C: Checker>(checker: C, port: u16) -> std::io::Result<(
 //         assert_eq!(response.result, "MUMBLE");
 //     }
 // }
-
-
