@@ -7,7 +7,7 @@ use mongodb::{
     Client,
 };
 
-use tracing::{debug, info, warn};
+use tracing::{debug, info, trace_span, warn, Instrument};
 
 struct ExampleChecker {
     db: Client,
@@ -81,6 +81,17 @@ impl Checker for ExampleChecker {
     }
 
     async fn putnoise(&self, _checker_request: &CheckerRequest) -> CheckerResult {
+        
+        // Tracing information https://docs.rs/tracing/
+        async {
+            debug!("Registration successful");
+        }
+        .instrument(trace_span!("REGISTER"))
+        .await;
+        // instrument async code
+
+        trace_span!("LOGIN").in_scope(|| info!("LOGIN DEBUG-PRINT")); // use in_scope only for syncronous subsections
+
         warn!("(WARN) PUTNOISE LOGGING");
         info!("(INFO) PUTNOISE LOGGING");
         debug!("(DBUG) PUTNOISE LOGGING");
