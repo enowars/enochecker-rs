@@ -7,10 +7,13 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-# reqwest = { version = "0.11", features = ["json"] }
 futures = "*"
 serde = "*"
 serde_json = "*"
-actix-web = "*"
+actix-web = "^4.0.0-beta.5"
 tokio = "*"
 async-trait = "0.1.48"
+tracing = "*"
+tracing-appender = "*"
+tracing-core = "*"
+tracing-subscriber = { version = "*", features = ["fmt", "chrono"] }

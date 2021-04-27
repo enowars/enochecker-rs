@@ -8,5 +8,7 @@ edition = "2018"
 
 [dependencies]
 enochecker = {path="../../"}
-async-trait = "*"
-actix-web = "*"
+actix-web = "^4.0.0-beta.5"
+mongodb = "^2.0.0-alpha.1"
+serde = "*"
+tracing = "*"
