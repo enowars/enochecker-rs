@@ -11,8 +11,9 @@ use tracing_subscriber::{layer::SubscriberExt, Registry};
 
 mod enologmessage_formatting_layer;
 
-pub use actix_web::main;
+pub use actix_web;
 pub use async_trait::async_trait;
+pub use tokio;
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum CheckerError {
