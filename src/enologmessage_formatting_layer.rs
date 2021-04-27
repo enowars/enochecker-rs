@@ -338,6 +338,7 @@ where
         //     let _ = self.emit(serialized);
         // }
         let span = ctx.span(id).expect("Span not found, this is a bug");
+        // eprintln!("PARENT: {:?}", span.parent_id());
         // We want to inherit the fields from the parent span, if there is one.
         let mut visitor = if let Some(parent_span) = span.parent() {
             // Extensions can be used to associate arbitrary data to a span.
@@ -360,7 +361,7 @@ where
         // Associate the visitor with the Span for future usage via the Span's extensions
         extensions.insert(visitor);
 
-        eprintln!("NEW: {:?}, ID: {:?}", attrs, id);
+        // eprintln!("NEW: {:?}, ID: {:?}", attrs, id);
     }
 
     /// When we enter a span **for the first time** save the timestamp in its extensions.

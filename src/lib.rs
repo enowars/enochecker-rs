@@ -151,24 +151,24 @@ async fn check<C: Checker>(
     let checker_result_fut = match checker_request.method.as_str() {
         "putflag" => checker
             .putflag(&checker_request)
-            .instrument(trace_span!("PUTFLAG")),
+            .instrument(trace_span!(parent: &check_span, "PUTFLAG")),
         "getflag" => checker
             .getflag(&checker_request)
-            .instrument(trace_span!("GETFLAG")),
+            .instrument(trace_span!(parent: &check_span, "GETFLAG")),
         "putnoise" => checker
             .putnoise(&checker_request)
-            .instrument(trace_span!("PUTNOISE")),
+            .instrument(trace_span!(parent: &check_span, "PUTNOISE")),
         "getnoise" => checker
             .getnoise(&checker_request)
-            .instrument(trace_span!("GETNOISE")),
+            .instrument(trace_span!(parent: &check_span, "GETNOISE")),
         "havoc" => checker
             .havoc(&checker_request)
-            .instrument(trace_span!("HAVOC")),
+            .instrument(trace_span!(parent: &check_span, "HAVOC")),
         _ => {
             let fut: std::pin::Pin<
                 Box<dyn futures::Future<Output = Result<(), CheckerError>> + Send>,
             > = Box::pin(async { Err(CheckerError::InternalError("Invalid method")) });
-            fut.instrument(trace_span!("INVALID!"))
+            fut.instrument(trace_span!(parent: &check_span, "INVALID!"))
         }
     }.instrument(check_span);
 
