@@ -1,4 +1,5 @@
-use enochecker::{async_trait, run_checker, Checker, CheckerError, CheckerRequest, CheckerResult};
+use enochecker::{async_trait, main};
+use enochecker::{run_checker, Checker, CheckerError, CheckerRequest, CheckerResult};
 use serde::{Deserialize, Serialize};
 
 use mongodb::{

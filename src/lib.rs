@@ -1,16 +1,18 @@
-use std::time::Duration;
+use std::{sync::Arc, time::Duration};
 
 use actix_web::{error::JsonPayloadError, web, App, HttpResponse, HttpServer};
-pub use async_trait::async_trait;
+
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
+
 use tokio::time::timeout;
 
 use tracing::{field, trace_span, Instrument};
-use tracing_subscriber::layer::SubscriberExt;
-use tracing_subscriber::Registry;
+use tracing_subscriber::{layer::SubscriberExt, Registry};
 
 mod enologmessage_formatting_layer;
+
+pub use actix_web::main;
+pub use async_trait::async_trait;
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum CheckerError {

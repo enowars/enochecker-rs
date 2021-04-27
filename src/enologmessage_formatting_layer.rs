@@ -340,19 +340,18 @@ where
         let span = ctx.span(id).expect("Span not found, this is a bug");
         // eprintln!("PARENT: {:?}", span.parent_id());
         // We want to inherit the fields from the parent span, if there is one.
-        let mut visitor: EnoLogmessageStorage = span.parent().map_or_else(
-            EnoLogmessageStorage::default,
-            |parent_span| {
-                // Extensions can be used to associate arbitrary data to a span.
-                // We'll use it to store our representation of its fields.
-                // We create a copy of the parent visitor!
-                let mut extensions = parent_span.extensions_mut();
-                extensions
-                    .get_mut::<EnoLogmessageStorage>()
-                    .map(|v| v.clone())
-                    .unwrap_or_default()
-            },
-        );
+        let mut visitor: EnoLogmessageStorage =
+            span.parent()
+                .map_or_else(EnoLogmessageStorage::default, |parent_span| {
+                    // Extensions can be used to associate arbitrary data to a span.
+                    // We'll use it to store our representation of its fields.
+                    // We create a copy of the parent visitor!
+                    let mut extensions = parent_span.extensions_mut();
+                    extensions
+                        .get_mut::<EnoLogmessageStorage>()
+                        .map(|v| v.clone())
+                        .unwrap_or_default()
+                });
 
         let mut extensions = span.extensions_mut();
 
