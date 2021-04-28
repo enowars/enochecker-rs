@@ -22,7 +22,7 @@ pub enum CheckerError {
     InternalError(&'static str),
 }
 
-pub type CheckerResult = Result<(), CheckerError>;
+pub type CheckerResult<T> = Result<T, CheckerError>;
 
 #[async_trait]
 pub trait Checker: Sync + Send + 'static {
@@ -32,24 +32,24 @@ pub trait Checker: Sync + Send + 'static {
     const HAVOC_VARIANTS: u64;
 
     // PUTFLAG/GETFLAG are required
-    async fn putflag(&self, checker_request: &CheckerRequest) -> CheckerResult;
-    async fn getflag(&self, checker_request: &CheckerRequest) -> CheckerResult;
+    async fn putflag(&self, checker_request: &CheckerRequest) -> CheckerResult<()>;
+    async fn getflag(&self, checker_request: &CheckerRequest) -> CheckerResult<()>;
 
-    async fn putnoise(&self, _checker_request: &CheckerRequest) -> CheckerResult {
+    async fn putnoise(&self, _checker_request: &CheckerRequest) -> CheckerResult<()> {
         unimplemented!(
             "{:?} requested, but method is not implemented!",
             stringify!($func_name)
         );
     }
 
-    async fn getnoise(&self, _checker_request: &CheckerRequest) -> CheckerResult {
+    async fn getnoise(&self, _checker_request: &CheckerRequest) -> CheckerResult<()> {
         unimplemented!(
             "{:?} requested, but method is not implemented!",
             stringify!($func_name)
         );
     }
 
-    async fn havoc(&self, _checker_request: &CheckerRequest) -> CheckerResult {
+    async fn havoc(&self, _checker_request: &CheckerRequest) -> CheckerResult<()> {
         unimplemented!(
             "{:?} requested, but method is not implemented!",
             stringify!($func_name)
@@ -101,8 +101,8 @@ struct CheckerResponse {
     message: Option<String>,
 }
 
-impl From<CheckerResult> for CheckerResponse {
-    fn from(result: CheckerResult) -> Self {
+impl From<CheckerResult<()>> for CheckerResponse {
+    fn from(result: CheckerResult<()>) -> Self {
         match result {
             Ok(()) => CheckerResponse {
                 result: "OK".to_owned(),
@@ -172,7 +172,7 @@ async fn check<C: Checker>(
     }
     .instrument(check_span);
 
-    let checker_result: CheckerResult = match timeout(
+    let checker_result: CheckerResult<()> = match timeout(
         Duration::from_millis(checker_request.timeout),
         checker_result_fut,
     )

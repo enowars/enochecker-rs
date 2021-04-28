@@ -52,7 +52,7 @@ impl Checker for ExampleChecker {
     const NOISE_VARIANTS: u64 = 1;
     const HAVOC_VARIANTS: u64 = 1;
 
-    async fn putflag(&self, checker_request: &CheckerRequest) -> CheckerResult {
+    async fn putflag(&self, checker_request: &CheckerRequest) -> CheckerResult<()> {
         self.db
             .database("daw")
             .collection("dawdw")
@@ -69,7 +69,7 @@ impl Checker for ExampleChecker {
         Ok(())
     }
 
-    async fn getflag(&self, checker_request: &CheckerRequest) -> CheckerResult {
+    async fn getflag(&self, checker_request: &CheckerRequest) -> CheckerResult<()> {
         let _foo: ExampleServiceUser = self
             .db
             .database("daw")
@@ -81,7 +81,7 @@ impl Checker for ExampleChecker {
         Ok(())
     }
 
-    async fn putnoise(&self, _checker_request: &CheckerRequest) -> CheckerResult {
+    async fn putnoise(&self, _checker_request: &CheckerRequest) -> CheckerResult<()> {
         
         // Tracing information https://docs.rs/tracing/
         async {
@@ -99,11 +99,11 @@ impl Checker for ExampleChecker {
         Ok(())
     }
 
-    async fn getnoise(&self, _checker_request: &CheckerRequest) -> CheckerResult {
+    async fn getnoise(&self, _checker_request: &CheckerRequest) -> CheckerResult<()> {
         Err(CheckerError::Mumble("This is supposed to be a message that hopefully wraps when displayed on the checker-website. I hope <pre></pre> elements automagically add line breaks, since I don't know what I'll do if they don't D:."))
     }
 
-    async fn havoc(&self, _checker_request: &CheckerRequest) -> CheckerResult {
+    async fn havoc(&self, _checker_request: &CheckerRequest) -> CheckerResult<()> {
         Ok(())
     }
 }
