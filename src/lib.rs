@@ -189,14 +189,14 @@ async fn request_form<C: Checker>() -> HttpResponse {
     HttpResponse::Ok().body(include_str!("post.html"))
 }
 
-fn handle_json_error(err: &JsonPayloadError) -> actix_web::Error {
-    match err {
-        JsonPayloadError::Overflow => HttpResponse::PayloadTooLarge(),
-        _ => HttpResponse::BadRequest(),
-    }
-    .body(err.to_string())
-    .into()
-}
+// fn handle_json_error(err: &JsonPayloadError) -> actix_web::Error {
+//     match err {
+//         JsonPayloadError::Overflow => HttpResponse::PayloadTooLarge(),
+//         _ => HttpResponse::BadRequest(),
+//     }
+//     .body(err.to_string())
+//     .into()
+// }
 
 /// Starts the Checker on the given port
 ///
@@ -227,10 +227,10 @@ pub async fn run_checker<C: Checker>(checker: C, port: u16) -> std::io::Result<(
             .app_data(
                 actix_web::web::JsonConfig::default()
                     .limit(4096)
-                    .error_handler(|err, _req| {
-                        // <- create custom error response
-                        handle_json_error(&err)
-                    }),
+                    // .error_handler(|err, _req| {
+                    //     // <- create custom error response
+                    //     handle_json_error(&err)
+                    // }),
             )
             .route("/", web::post().to(check::<C>))
             .route("/", web::get().to(request_form::<C>))
