@@ -11,7 +11,7 @@ futures = "*"
 serde = "*"
 serde_json = "*"
 actix-web = "^4.0.0-beta.5"
-tokio = "*"
+tokio = { version = "*", features = ["full"] }
 async-trait = "0.1.48"
 tracing = "*"
 tracing-appender = "*"
