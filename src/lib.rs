@@ -1,4 +1,4 @@
-use std::{sync::Arc, time::Duration};
+use std::{string::FromUtf8Error, sync::Arc, time::Duration};
 
 use actix_web::{error::JsonPayloadError, web, App, HttpResponse, HttpServer};
 
@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 
 use tokio::time::timeout;
 
-use tracing::{field, trace_span, Instrument};
+use tracing::{field, trace_span, Instrument, warn};
 use tracing_subscriber::{layer::SubscriberExt, Registry};
 
 mod enologmessage_formatting_layer;
@@ -20,6 +20,13 @@ pub enum CheckerError {
     Mumble(&'static str),
     Offline(&'static str),
     InternalError(&'static str),
+}
+
+impl From<FromUtf8Error> for CheckerError {
+    fn from(e: FromUtf8Error) -> Self {
+        warn!("UTF8 decoding failed {}", e);
+        return CheckerError::Mumble("Client returned invalid UTF8");
+    }
 }
 
 pub type CheckerResult<T> = Result<T, CheckerError>;
