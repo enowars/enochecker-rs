@@ -85,7 +85,7 @@ where
     })
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct CheckerRequest {
     pub task_id: u64,
