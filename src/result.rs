@@ -1,4 +1,4 @@
-use std::{fmt::Debug, string::FromUtf8Error};
+use std::fmt::Debug;
 
 use tracing::warn;
 
@@ -19,7 +19,7 @@ pub enum CheckerError {
 
 pub type CheckerResult<T> = Result<T, CheckerError>;
 
-trait IntoCheckerError {
+pub trait IntoCheckerError {
     fn into_mumble_error(self, msg: &'static str) -> CheckerError;
     fn into_offline_error(self, msg: &'static str) -> CheckerError;
     fn into_internal_error(self, msg: &'static str) -> CheckerError;
@@ -43,7 +43,7 @@ impl<T: Debug> IntoCheckerError for T {
     }
 }
 
-trait IntoCheckerResult<T, E> 
+pub trait IntoCheckerResult<T, E> 
 where E:Debug {
     fn into_mumble(self, msg: &'static str) -> CheckerResult<T>;
     fn into_offline(self, msg: &'static str) -> CheckerResult<T>;
