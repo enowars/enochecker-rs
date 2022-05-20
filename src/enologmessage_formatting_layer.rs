@@ -1,6 +1,7 @@
 // use crate::storage_layer::JsonStorage;
 use serde::ser::{SerializeMap, Serializer};
 use serde_json::Value;
+use tracing_appender::non_blocking::NonBlocking;
 
 use std::collections::HashMap;
 use std::fmt;
@@ -9,7 +10,7 @@ use tracing::field::{Field, Visit};
 use tracing::{span::Record, Event, Id, Subscriber};
 use tracing_core::metadata::Level;
 use tracing_core::span::Attributes;
-use tracing_subscriber::fmt::time::{ChronoUtc, FormatTime};
+use tracing_subscriber::fmt::time::{UtcTime, FormatTime};
 use tracing_subscriber::fmt::MakeWriter;
 use tracing_subscriber::layer::Context;
 use tracing_subscriber::registry::SpanRef;
@@ -80,22 +81,22 @@ impl Visit for EnoLogmessageStorage<'_> {
 
 const MESSAGE_TYPE: &str = "infrastructure";
 
-pub struct EnoLogmessageLayer<W: MakeWriter + 'static> {
+pub struct EnoLogmessageLayer<W: MakeWriter<'static> + 'static> {
     make_writer: W,
     tool: String,
     service_name: &'static str,
-    timer: ChronoUtc,
+    timer: UtcTime<time::format_description::well_known::Rfc3339>,
 }
 
-impl<W: MakeWriter + 'static> EnoLogmessageLayer<W> {
-    /// Create a new `ENOELKFormattingLayer`.
+impl<W: MakeWriter<'static> + 'static> EnoLogmessageLayer<W> {
+    /// Create a new `EnoLogmessageLayer`.
 
     pub fn new(service_name: &'static str, make_writer: W) -> Self {
         Self {
             make_writer,
             service_name,
             tool: service_name.to_owned() + "Checker",
-            timer: ChronoUtc::rfc3339(),
+            timer: UtcTime::rfc_3339(),
         }
     }
 
@@ -244,8 +245,8 @@ fn level_numeric(level: Level) -> u16 {
 
 impl<S, W> Layer<S> for EnoLogmessageLayer<W>
 where
-    S: Subscriber + for<'a> tracing_subscriber::registry::LookupSpan<'a>,
-    W: MakeWriter + 'static,
+    S: Subscriber + for<'b> tracing_subscriber::registry::LookupSpan<'b>,
+    W: MakeWriter<'static> + 'static,
 {
     fn on_event(&self, event: &Event<'_>, ctx: Context<'_, S>) {
         // Events do not necessarily happen in the context of a span, hence lookup_current
@@ -293,6 +294,7 @@ where
             map_serializer.serialize_entry("severityLevel", &level_numeric(*metadata.level()))?;
 
             let mut timestamp = String::new();
+
             self.timer
                 .format_time(&mut timestamp)
                 .expect("Failed to format time");
@@ -332,37 +334,37 @@ where
         values.record(visitor);
     }
 
-    fn new_span(&self, attrs: &Attributes, id: &Id, ctx: Context<'_, S>) {
-        // let span = ctx.span(id).expect("Span not found, this is a bug");
-        // if let Ok(serialized) = self.serialize_span(&span, Type::EnterSpan) {
-        //     let _ = self.emit(serialized);
-        // }
-        let span = ctx.span(id).expect("Span not found, this is a bug");
-        // eprintln!("PARENT: {:?}", span.parent_id());
-        // We want to inherit the fields from the parent span, if there is one.
-        let mut visitor: EnoLogmessageStorage =
-            span.parent()
-                .map_or_else(EnoLogmessageStorage::default, |parent_span| {
-                    // Extensions can be used to associate arbitrary data to a span.
-                    // We'll use it to store our representation of its fields.
-                    // We create a copy of the parent visitor!
-                    let mut extensions = parent_span.extensions_mut();
-                    extensions
-                        .get_mut::<EnoLogmessageStorage>()
-                        .map(|v| v.clone())
-                        .unwrap_or_default()
-                });
+    // fn new_span(&self, attrs: &Attributes, id: &Id, ctx: Context<'_, S>) {
+    //     // let span = ctx.span(id).expect("Span not found, this is a bug");
+    //     // if let Ok(serialized) = self.serialize_span(&span, Type::EnterSpan) {
+    //     //     let _ = self.emit(serialized);
+    //     // }
+    //     let span = ctx.span(id).expect("Span not found, this is a bug");
+    //     // eprintln!("PARENT: {:?}", span.parent_id());
+    //     // We want to inherit the fields from the parent span, if there is one.
+    //     let mut visitor: EnoLogmessageStorage =
+    //         span.parent()
+    //             .map_or_else(EnoLogmessageStorage::default, |parent_span| {
+    //                 // Extensions can be used to associate arbitrary data to a span.
+    //                 // We'll use it to store our representation of its fields.
+    //                 // We create a copy of the parent visitor!
+    //                 let mut extensions = parent_span.extensions_mut();
+    //                 extensions
+    //                     .get_mut::<EnoLogmessageStorage>()
+    //                     .map(|v| v.clone())
+    //                     .unwrap_or_default()
+    //             });
 
-        let mut extensions = span.extensions_mut();
+    //     let mut extensions = span.extensions_mut();
 
-        // Register all fields.
-        // Fields on the new span should override fields on the parent span if there is a conflict.
-        attrs.record(&mut visitor);
-        // Associate the visitor with the Span for future usage via the Span's extensions
-        extensions.insert(visitor);
+    //     // Register all fields.
+    //     // Fields on the new span should override fields on the parent span if there is a conflict.
+    //     attrs.record(&mut visitor);
+    //     // Associate the visitor with the Span for future usage via the Span's extensions
+    //     extensions.insert(visitor);
 
-        // eprintln!("NEW: {:?}, ID: {:?}", attrs, id);
-    }
+    //     // eprintln!("NEW: {:?}, ID: {:?}", attrs, id);
+    // }
 
     /// When we enter a span **for the first time** save the timestamp in its extensions.
     fn on_enter(&self, _span: &Id, _ctx: Context<'_, S>) {
