@@ -1,10 +1,11 @@
 use enochecker::async_trait;
-use enochecker::{run_checker, Checker, CheckerError, CheckerRequest, CheckerResult};
+use enochecker::{run_checker, Checker, CheckerRequest};
+use enochecker::result::{CheckerError, CheckerResult};
 use serde::{Deserialize, Serialize};
 
 use mongodb::{
     bson::doc,
-    options::{ClientOptions, StreamAddress},
+    options::{ClientOptions, ServerAddress},
     Client,
 };
 
@@ -25,8 +26,8 @@ impl ExampleChecker {
     async fn new() -> Self {
         let client = Client::with_options(
             ClientOptions::builder()
-                .hosts(vec![StreamAddress {
-                    hostname: "localhost".into(),
+                .hosts(vec![ServerAddress::Tcp {
+                    host: "localhost".into(),
                     port: Some(27017),
                 }])
                 .build(),
@@ -51,6 +52,7 @@ impl Checker for ExampleChecker {
     const FLAG_VARIANTS: u64 = 1;
     const NOISE_VARIANTS: u64 = 1;
     const HAVOC_VARIANTS: u64 = 1;
+    const EXPLOIT_VARIANTS: u64 = 0;
 
     async fn putflag(&self, checker_request: &CheckerRequest) -> CheckerResult<()> {
         self.db
