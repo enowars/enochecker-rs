@@ -9,7 +9,7 @@ use tokio::time::timeout;
 use tracing::{field, trace_span, Instrument};
 use tracing_subscriber::{layer::SubscriberExt, Registry};
 
-mod enologmessage_formatting_layer;
+// mod enologmessage_formatting_layer;
 pub mod result;
 use result::{CheckerError, CheckerResult};
 
@@ -23,6 +23,7 @@ pub trait Checker: Sync + Send + 'static {
     const FLAG_VARIANTS: u64;
     const NOISE_VARIANTS: u64;
     const HAVOC_VARIANTS: u64;
+    const EXPLOIT_VARIANTS: u64;
 
     // PUTFLAG/GETFLAG are required
     async fn putflag(&self, checker_request: &CheckerRequest) -> CheckerResult<()>;
@@ -48,6 +49,13 @@ pub trait Checker: Sync + Send + 'static {
             stringify!($func_name)
         );
     }
+
+    async fn exploit(&self, _checker_request: &CheckerRequest) -> CheckerResult<()> {
+        unimplemented!(
+            "{:?} requested, but method is not implemented!",
+            stringify!($func_name)
+        );
+    }
 }
 
 #[derive(Serialize, Debug)]
@@ -57,6 +65,7 @@ pub struct ServiceInfo {
     flag_variants: u64,
     noise_variants: u64,
     havoc_variants: u64,
+    exploit_variants: u64,
 }
 
 async fn service_info<C>() -> web::Json<ServiceInfo>
@@ -68,6 +77,7 @@ where
         flag_variants: C::FLAG_VARIANTS,
         noise_variants: C::NOISE_VARIANTS,
         havoc_variants: C::HAVOC_VARIANTS,
+        exploit_variants: C::NOISE_VARIANTS,
     })
 }
 
@@ -206,11 +216,17 @@ async fn request_form<C: Checker>() -> HttpResponse {
 pub async fn run_checker<C: Checker>(checker: C, port: u16) -> std::io::Result<()> {
     //let _trace_subscriber = tracing_subscriber::fmt::SubscriberBuilder::default().json().try_init();
     let (non_blocking_writer, _guard) = tracing_appender::non_blocking(std::io::stdout());
-    let eno_formatter = crate::enologmessage_formatting_layer::EnoLogmessageLayer::new(
-        C::SERVICE_NAME,
-        non_blocking_writer,
-    );
-    let subscriber = Registry::default().with(eno_formatter);
+    // let eno_formatter = crate::enologmessage_formatting_layer::EnoLogmessageLayer::new(
+    //     C::SERVICE_NAME,
+    //     non_blocking_writer,
+    // );
+
+    // let subscriber = Registry::default().with(eno_formatter);
+
+    let subscriber = tracing_subscriber::FmtSubscriber::builder()
+        .with_writer(non_blocking_writer)
+        .json()
+        .finish();
     tracing::subscriber::set_global_default(subscriber).expect("Failed to set logging subscriber");
 
     let checker = Arc::new(checker);
@@ -218,12 +234,10 @@ pub async fn run_checker<C: Checker>(checker: C, port: u16) -> std::io::Result<(
         App::new()
             .data(checker.clone())
             .app_data(
-                actix_web::web::JsonConfig::default()
-                    .limit(4096)
-                    // .error_handler(|err, _req| {
-                    //     // <- create custom error response
-                    //     handle_json_error(&err)
-                    // }),
+                actix_web::web::JsonConfig::default().limit(4096), // .error_handler(|err, _req| {
+                                                                   //     // <- create custom error response
+                                                                   //     handle_json_error(&err)
+                                                                   // }),
             )
             .route("/", web::post().to(check::<C>))
             .route("/", web::get().to(request_form::<C>))

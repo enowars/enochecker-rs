@@ -7,13 +7,14 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+async-trait = "*"
+actix-web = "4.*"
 futures = "*"
-serde = "*"
+serde = { version="*", features=["derive"] }
 serde_json = "*"
-actix-web = "^4.0.0-beta.6"
-tokio = { version = "*", features = ["full"] }
-async-trait = "0.1.48"
+tokio = { version = "1.*", features = ["full"] }
+time = "0.3.*"
 tracing = "*"
-tracing-appender = "*"
+tracing-appender = "0.2.*"
 tracing-core = "*"
-tracing-subscriber = { version = "*", features = ["fmt", "chrono"] }
+tracing-subscriber = { version = "0.3.*", features = ["fmt", "time", "json"] }
