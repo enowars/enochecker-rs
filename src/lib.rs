@@ -1,13 +1,12 @@
 use std::{sync::Arc, time::Duration};
 
-use actix_web::{error::JsonPayloadError, web, App, HttpResponse, HttpServer};
+use actix_web::{ web::{self, Data}, App, HttpResponse, HttpServer};
 
 use serde::{Deserialize, Serialize};
 
 use tokio::time::timeout;
 
 use tracing::{field, trace_span, Instrument};
-use tracing_subscriber::{layer::SubscriberExt, Registry};
 
 // mod enologmessage_formatting_layer;
 pub mod result;
@@ -225,14 +224,14 @@ pub async fn run_checker<C: Checker>(checker: C, port: u16) -> std::io::Result<(
 
     let subscriber = tracing_subscriber::FmtSubscriber::builder()
         .with_writer(non_blocking_writer)
-        .json()
+        .pretty()
         .finish();
     tracing::subscriber::set_global_default(subscriber).expect("Failed to set logging subscriber");
 
     let checker = Arc::new(checker);
     HttpServer::new(move || {
         App::new()
-            .data(checker.clone())
+            .app_data(Data::new(checker.clone()))
             .app_data(
                 actix_web::web::JsonConfig::default().limit(4096), // .error_handler(|err, _req| {
                                                                    //     // <- create custom error response
