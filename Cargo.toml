@@ -1,6 +1,6 @@
 [package]
 name = "enochecker"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["MMunier <marc@geomaps.de>"]
 edition = "2018"
 
@@ -17,4 +17,5 @@ time = "0.3.*"
 tracing = "*"
 tracing-appender = "0.2.*"
 tracing-core = "*"
+tracing-serde = "0.1.*"
 tracing-subscriber = { version = "0.3.*", features = ["fmt", "time", "json"] }

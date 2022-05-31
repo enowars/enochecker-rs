@@ -1,15 +1,14 @@
-use std::{sync::Arc, time::Duration};
+use std::{pin::Pin, sync::Arc, time::Duration};
 
-use actix_web::{error::JsonPayloadError, web, App, HttpResponse, HttpServer};
+use actix_web::{web, App, HttpResponse, HttpServer};
 
 use serde::{Deserialize, Serialize};
 
 use tokio::time::timeout;
 
 use tracing::{field, trace_span, Instrument};
-use tracing_subscriber::{layer::SubscriberExt, Registry};
 
-// mod enologmessage_formatting_layer;
+pub mod enologmessage_formatting_layer;
 pub mod result;
 use result::{CheckerError, CheckerResult};
 
@@ -26,7 +25,7 @@ pub trait Checker: Sync + Send + 'static {
     const EXPLOIT_VARIANTS: u64;
 
     // PUTFLAG/GETFLAG are required
-    async fn putflag(&self, checker_request: &CheckerRequest) -> CheckerResult<()>;
+    async fn putflag(&self, checker_request: &CheckerRequest) -> CheckerResult<Option<String>>;
     async fn getflag(&self, checker_request: &CheckerRequest) -> CheckerResult<()>;
 
     async fn putnoise(&self, _checker_request: &CheckerRequest) -> CheckerResult<()> {
@@ -50,7 +49,7 @@ pub trait Checker: Sync + Send + 'static {
         );
     }
 
-    async fn exploit(&self, _checker_request: &CheckerRequest) -> CheckerResult<()> {
+    async fn exploit(&self, _checker_request: &CheckerRequest) -> CheckerResult<String> {
         unimplemented!(
             "{:?} requested, but method is not implemented!",
             stringify!($func_name)
@@ -96,12 +95,29 @@ pub struct CheckerRequest {
     pub timeout: u64,      // Timeout in ms
     pub round_length: u64, // Round Length in ms
     pub task_chain_id: String,
+
+    // EXPLOIT SPECIFIC FIELDS
+    pub flag_regex: Option<String>,
+    pub flag_hash: Option<String>,
+    pub attack_info: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 struct CheckerResponse {
     result: String,
     message: Option<String>,
+    flag: Option<String>,
+    flag_hint: Option<String>,
+}
+
+impl CheckerResponse {
+    pub fn with_flag(self, flag: Option<String>) -> Self {
+        Self { flag, ..self }
+    }
+
+    pub fn with_hint(self, flag_hint: Option<String>) -> Self {
+        Self { flag_hint, ..self }
+    }
 }
 
 impl From<CheckerResult<()>> for CheckerResponse {
@@ -110,20 +126,28 @@ impl From<CheckerResult<()>> for CheckerResponse {
             Ok(()) => CheckerResponse {
                 result: "OK".to_owned(),
                 message: None,
+                flag_hint: None,
+                flag: None,
             },
             Err(CheckerError::Mumble(msg)) => CheckerResponse {
                 result: "MUMBLE".to_owned(),
                 message: Some(msg.to_owned()),
+                flag_hint: None,
+                flag: None,
             },
 
             Err(CheckerError::Offline(msg)) => CheckerResponse {
                 result: "OFFLINE".to_owned(),
                 message: Some(msg.to_owned()),
+                flag_hint: None,
+                flag: None,
             },
 
             Err(CheckerError::InternalError(msg)) => CheckerResponse {
                 result: "INTERNAL_ERROR".to_owned(),
                 message: Some(msg.to_owned()),
+                flag_hint: None,
+                flag: None,
             },
         }
     }
@@ -150,10 +174,24 @@ async fn check<C: Checker>(
         check_span.record("flag", &flag.as_str());
     }
 
+    let mut flag_hint = None;
+    let mut flag: Option<String> = None;
     let checker_result_fut = match checker_request.method.as_str() {
-        "putflag" => checker
-            .putflag(&checker_request)
-            .instrument(trace_span!(parent: &check_span, "PUTFLAG")),
+        "putflag" => {
+            let res: Pin<Box<dyn futures::Future<Output = Result<(), CheckerError>> + Send>> =
+                Box::pin(async {
+                    let res = checker.putflag(&checker_request).await;
+                    let res = match res {
+                        Ok(flag_hint_result) => {
+                            flag_hint = flag_hint_result;
+                            Ok(())
+                        }
+                        Err(v) => Err(v),
+                    };
+                    res
+                });
+            res.instrument(trace_span!(parent: &check_span, "PUTFLAG"))
+        }
         "getflag" => checker
             .getflag(&checker_request)
             .instrument(trace_span!(parent: &check_span, "GETFLAG")),
@@ -166,10 +204,24 @@ async fn check<C: Checker>(
         "havoc" => checker
             .havoc(&checker_request)
             .instrument(trace_span!(parent: &check_span, "HAVOC")),
+        "exploit" => {
+            let res: Pin<Box<dyn futures::Future<Output = Result<(), CheckerError>> + Send>> =
+                Box::pin(async {
+                    let _res = checker.exploit(&checker_request).await;
+
+                    match _res {
+                        Ok(val) => {
+                            flag = Some(val);
+                            Ok(())
+                        }
+                        Err(e) => Err(e),
+                    }
+                });
+            res.instrument(trace_span!(parent: &check_span, "EXPLOIT"))
+        }
         _ => {
-            let fut: std::pin::Pin<
-                Box<dyn futures::Future<Output = Result<(), CheckerError>> + Send>,
-            > = Box::pin(async { Err(CheckerError::InternalError("Invalid method")) });
+            let fut: Pin<Box<dyn futures::Future<Output = Result<(), CheckerError>> + Send>> =
+                Box::pin(async { Err(CheckerError::InternalError("Invalid method")) });
             fut.instrument(trace_span!(parent: &check_span, "INVALID!"))
         }
     }
@@ -185,7 +237,11 @@ async fn check<C: Checker>(
         Err(_) => Err(CheckerError::Mumble("Checker-Timeout!")),
     };
 
-    web::Json(CheckerResponse::from(checker_result))
+    web::Json(
+        CheckerResponse::from(checker_result)
+            .with_flag(flag)
+            .with_hint(flag_hint),
+    )
 }
 
 async fn request_form<C: Checker>() -> HttpResponse {
@@ -216,29 +272,25 @@ async fn request_form<C: Checker>() -> HttpResponse {
 pub async fn run_checker<C: Checker>(checker: C, port: u16) -> std::io::Result<()> {
     //let _trace_subscriber = tracing_subscriber::fmt::SubscriberBuilder::default().json().try_init();
     let (non_blocking_writer, _guard) = tracing_appender::non_blocking(std::io::stdout());
-    // let eno_formatter = crate::enologmessage_formatting_layer::EnoLogmessageLayer::new(
-    //     C::SERVICE_NAME,
-    //     non_blocking_writer,
-    // );
+    let eno_formatter = crate::enologmessage_formatting_layer::EnoLogmessageFormat {
+        tool: std::any::type_name::<C>(),
+        service_name: C::SERVICE_NAME,
+        flatten_event: true,
+    };
 
     // let subscriber = Registry::default().with(eno_formatter);
-
     let subscriber = tracing_subscriber::FmtSubscriber::builder()
         .with_writer(non_blocking_writer)
         .json()
+        .event_format(eno_formatter)
         .finish();
     tracing::subscriber::set_global_default(subscriber).expect("Failed to set logging subscriber");
 
     let checker = Arc::new(checker);
     HttpServer::new(move || {
         App::new()
-            .data(checker.clone())
-            .app_data(
-                actix_web::web::JsonConfig::default().limit(4096), // .error_handler(|err, _req| {
-                                                                   //     // <- create custom error response
-                                                                   //     handle_json_error(&err)
-                                                                   // }),
-            )
+            .app_data(web::Data::new(checker.clone()))
+            .app_data(web::JsonConfig::default().limit(4096))
             .route("/", web::post().to(check::<C>))
             .route("/", web::get().to(request_form::<C>))
             .route("/service", web::get().to(service_info::<C>))
