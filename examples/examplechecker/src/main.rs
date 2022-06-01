@@ -1,6 +1,6 @@
 use enochecker::async_trait;
-use enochecker::{run_checker, Checker, CheckerRequest};
 use enochecker::result::{CheckerError, CheckerResult};
+use enochecker::{run_checker, Checker, CheckerRequest};
 use serde::{Deserialize, Serialize};
 
 use mongodb::{
@@ -84,7 +84,6 @@ impl Checker for ExampleChecker {
     }
 
     async fn putnoise(&self, _checker_request: &CheckerRequest) -> CheckerResult<()> {
-        
         // Tracing information https://docs.rs/tracing/
         async {
             debug!("Registration successful");
