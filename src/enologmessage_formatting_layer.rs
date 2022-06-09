@@ -55,7 +55,7 @@ where
             serializer.serialize_entry("timestamp", &timestamp)?;
             serializer.serialize_entry("type", MESSAGE_TYPE)?;
             serializer.serialize_entry("severity", &meta.level().as_serde())?;
-            serializer.serialize_entry("severity_level", &numeric_level(meta.level()))?;
+            serializer.serialize_entry("severityLevel", &numeric_level(meta.level()))?;
 
             let format_field_marker: std::marker::PhantomData<N> = std::marker::PhantomData;
 
@@ -73,8 +73,53 @@ where
                 serializer.serialize_entry("fields", &event.field_map())?;
             };
 
+            if let Some(ref span) = current_span {
+                for span in span.scope().from_root() {
+                    let ext = span.extensions();
+                    let data = ext
+                        .get::<tracing_subscriber::fmt::FormattedFields<N>>()
+                        .expect("Unable to find FormattedFields in extensions; this is a bug");
+
+                    match serde_json::from_str::<serde_json::Value>(data) {
+                        Ok(serde_json::Value::Object(fields)) => {
+                            for field in fields {
+                                serializer.serialize_entry(&field.0, &field.1)?;
+                            }
+                        }
+                        // We have fields for this span which are valid JSON but not an object.
+                        // This is probably a bug, so panic if we're in debug mode
+                        Ok(_) if cfg!(debug_assertions) => panic!(
+                            "span '{}' had malformed fields! this is a bug.\n  error: invalid JSON object\n  fields: {:?}",
+                            span.metadata().name(),
+                            data
+                        ),
+                        // If we *aren't* in debug mode, it's probably best not to
+                        // crash the program, let's log the field found but also an
+                        // message saying it's type  is invalid
+                        Ok(value) => {
+                            serializer.serialize_entry("field", &value)?;
+                            serializer.serialize_entry("field_error", "field was no a valid object")?
+                        }
+                        // We have previously recorded fields for this span
+                        // should be valid JSON. However, they appear to *not*
+                        // be valid JSON. This is almost certainly a bug, so
+                        // panic if we're in debug mode
+                        Err(e) if cfg!(debug_assertions) => panic!(
+                            "span '{}' had malformed fields! this is a bug.\n  error: {}\n  fields: {:?}",
+                            span.metadata().name(),
+                            e,
+                            data
+                        ),
+                        // If we *aren't* in debug mode, it's probably best not
+                        // crash the program, but let's at least make sure it's clear
+                        // that the fields are not supposed to be missing.
+                        Err(e) => serializer.serialize_entry("field_error", &format!("{}", e))?,
+                    };
+                }
+            }
+
             serializer.serialize_entry("tool", &self.tool)?;
-            serializer.serialize_entry("service_name", &self.service_name)?;
+            serializer.serialize_entry("serviceName", &self.service_name)?;
 
             serializer.serialize_entry("function", meta.target())?;
             if let Some(filename) = meta.file() {
@@ -82,7 +127,7 @@ where
             }
 
             if let Some(line_number) = meta.line() {
-                serializer.serialize_entry("line_number", &line_number)?;
+                serializer.serialize_entry("lineNumber", &line_number)?;
             }
 
             if let Some(ref span) = current_span {
@@ -97,7 +142,11 @@ where
         };
 
         visit().map_err(|_| std::fmt::Error)?;
-        writeln!(writer)
+        writeln!(
+            writer,
+            "{}",
+            std::str::from_utf8(&logmessage).expect("Serde emitted invalid UTF-8")
+        )
     }
 }
 
@@ -123,7 +172,7 @@ where
 
         if let Some(leaf_span) = self.0.lookup_current() {
             for span in leaf_span.scope().from_root() {
-                serializer.serialize_element(&SerializableSpan(&span, self.1))?;
+                serializer.serialize_element(span.name())?;
             }
         }
 
@@ -197,5 +246,52 @@ where
         };
         serializer.serialize_entry("name", self.0.metadata().name())?;
         serializer.end()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use tracing::{info, Instrument};
+
+    #[tokio::test]
+    async fn log_something() {
+        let (non_blocking_writer, _guard) = tracing_appender::non_blocking(std::io::stdout());
+        let eno_formatter = crate::enologmessage_formatting_layer::EnoLogmessageFormat {
+            tool: "tests",
+            service_name: "TestTest123",
+            flatten_event: true,
+        };
+
+        // let subscriber = Registry::default().with(eno_formatter);
+        let subscriber = tracing_subscriber::FmtSubscriber::builder()
+            .with_writer(non_blocking_writer)
+            .json()
+            .event_format(eno_formatter)
+            .finish();
+        tracing::subscriber::set_global_default(subscriber)
+            .expect("Failed to set logging subscriber");
+
+        let check_span = tracing::warn_span!(
+            "Running Check",
+            method = "test",
+            taskId = 15,
+            teamId = 1,
+            teamName = "NOPTEAM",
+            currentRound = 1,
+            relatedRoundId = 1,
+            flag = 1,
+            variantId = 1,
+            taskChainId = 1,
+        );
+
+        check_span.in_scope(|| {
+            info!("Hi");
+        });
+
+        (async {
+            info!("async Hi");
+        })
+        .instrument(check_span)
+        .await;
     }
 }

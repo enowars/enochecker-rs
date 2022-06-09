@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 
 use tokio::time::timeout;
 
-use tracing::{field, trace_span, Instrument};
+use tracing::{error_span, field, Instrument};
 
 pub mod enologmessage_formatting_layer;
 pub mod result;
@@ -157,17 +157,17 @@ async fn check<C: Checker>(
     checker_request: web::Json<CheckerRequest>,
     checker: web::Data<Arc<C>>,
 ) -> web::Json<CheckerResponse> {
-    let check_span = tracing::trace_span!(
+    let check_span = tracing::error_span!(
         "Running Check",
         method = checker_request.method.as_str(),
-        task_id = checker_request.task_id,
-        team_id = checker_request.team_id,
-        team_name = checker_request.team_name.as_str(),
-        current_round = checker_request.current_round_id,
-        related_round_id = checker_request.related_round_id,
+        taskId = checker_request.task_id,
+        teamId = checker_request.team_id,
+        teamName = checker_request.team_name.as_str(),
+        currentRound = checker_request.current_round_id,
+        relatedRoundId = checker_request.related_round_id,
         flag = field::Empty,
-        variant_id = checker_request.variant_id,
-        task_chain_id = checker_request.task_chain_id.as_str(),
+        variantId = checker_request.variant_id,
+        taskChainId = checker_request.task_chain_id.as_str(),
     );
 
     if let Some(flag) = checker_request.flag.as_ref() {
@@ -190,20 +190,20 @@ async fn check<C: Checker>(
                     };
                     res
                 });
-            res.instrument(trace_span!(parent: &check_span, "PUTFLAG"))
+            res.instrument(error_span!(parent: &check_span, "PUTFLAG"))
         }
         "getflag" => checker
             .getflag(&checker_request)
-            .instrument(trace_span!(parent: &check_span, "GETFLAG")),
+            .instrument(error_span!(parent: &check_span, "GETFLAG")),
         "putnoise" => checker
             .putnoise(&checker_request)
-            .instrument(trace_span!(parent: &check_span, "PUTNOISE")),
+            .instrument(error_span!(parent: &check_span, "PUTNOISE")),
         "getnoise" => checker
             .getnoise(&checker_request)
-            .instrument(trace_span!(parent: &check_span, "GETNOISE")),
+            .instrument(error_span!(parent: &check_span, "GETNOISE")),
         "havoc" => checker
             .havoc(&checker_request)
-            .instrument(trace_span!(parent: &check_span, "HAVOC")),
+            .instrument(error_span!(parent: &check_span, "HAVOC")),
         "exploit" => {
             let res: Pin<Box<dyn futures::Future<Output = Result<(), CheckerError>> + Send>> =
                 Box::pin(async {
@@ -217,12 +217,12 @@ async fn check<C: Checker>(
                         Err(e) => Err(e),
                     }
                 });
-            res.instrument(trace_span!(parent: &check_span, "EXPLOIT"))
+            res.instrument(error_span!(parent: &check_span, "EXPLOIT"))
         }
         _ => {
             let fut: Pin<Box<dyn futures::Future<Output = Result<(), CheckerError>> + Send>> =
                 Box::pin(async { Err(CheckerError::InternalError("Invalid method")) });
-            fut.instrument(trace_span!(parent: &check_span, "INVALID!"))
+            fut.instrument(error_span!(parent: &check_span, "INVALID!"))
         }
     }
     .instrument(check_span);
