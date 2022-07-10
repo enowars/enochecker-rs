@@ -106,17 +106,19 @@ where
     }
 }
 
-impl<T> IntoCheckerResult<T, Option<()>> for Option<T>
-{
+impl<T> IntoCheckerResult<T, Option<()>> for Option<T> {
     fn into_mumble(self, msg: &'static str) -> CheckerResult<T> {
-        self.ok_or(None).map_err(|e:Option<()>| e.into_mumble_error(msg))
+        self.ok_or(None)
+            .map_err(|e: Option<()>| e.into_mumble_error(msg))
     }
 
     fn into_offline(self, msg: &'static str) -> CheckerResult<T> {
-        self.ok_or(None).map_err(|e:Option<()>| e.into_offline_error(msg))
+        self.ok_or(None)
+            .map_err(|e: Option<()>| e.into_offline_error(msg))
     }
 
     fn into_error(self, msg: &'static str) -> CheckerResult<T> {
-        self.ok_or(None).map_err(|e:Option<()>| e.into_internal_error(msg))
+        self.ok_or(None)
+            .map_err(|e: Option<()>| e.into_internal_error(msg))
     }
 }

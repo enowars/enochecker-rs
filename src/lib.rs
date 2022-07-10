@@ -76,7 +76,7 @@ where
         flag_variants: C::FLAG_VARIANTS,
         noise_variants: C::NOISE_VARIANTS,
         havoc_variants: C::HAVOC_VARIANTS,
-        exploit_variants: C::NOISE_VARIANTS,
+        exploit_variants: C::EXPLOIT_VARIANTS,
     })
 }
 
