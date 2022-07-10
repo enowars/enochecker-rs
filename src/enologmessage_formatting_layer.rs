@@ -136,7 +136,7 @@ where
                     .unwrap_or(());
             }
 
-            serializer.serialize_entry("spans", &SerializableContext(&ctx, format_field_marker))?;
+            serializer.serialize_entry("spans", &SerializableContext(ctx, format_field_marker))?;
 
             serializer.end()
         };

@@ -181,14 +181,14 @@ async fn check<C: Checker>(
             let res: Pin<Box<dyn futures::Future<Output = Result<(), CheckerError>> + Send>> =
                 Box::pin(async {
                     let res = checker.putflag(&checker_request).await;
-                    let res = match res {
+
+                    match res {
                         Ok(flag_hint_result) => {
                             flag_hint = flag_hint_result;
                             Ok(())
                         }
                         Err(v) => Err(v),
-                    };
-                    res
+                    }
                 });
             res.instrument(error_span!(parent: &check_span, "PUTFLAG"))
         }
