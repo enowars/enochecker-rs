@@ -163,7 +163,7 @@ async fn check<C: Checker>(
         taskId = checker_request.task_id,
         teamId = checker_request.team_id,
         teamName = checker_request.team_name.as_str(),
-        currentRound = checker_request.current_round_id,
+        currentRoundId = checker_request.current_round_id,
         relatedRoundId = checker_request.related_round_id,
         flag = field::Empty,
         variantId = checker_request.variant_id,
