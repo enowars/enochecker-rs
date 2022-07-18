@@ -103,11 +103,12 @@ pub struct CheckerRequest {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
 struct CheckerResponse {
     result: String,
     message: Option<String>,
     flag: Option<String>,
-    flag_hint: Option<String>,
+    attack_info: Option<String>,
 }
 
 impl CheckerResponse {
@@ -116,7 +117,7 @@ impl CheckerResponse {
     }
 
     pub fn with_hint(self, flag_hint: Option<String>) -> Self {
-        Self { flag_hint, ..self }
+        Self { attack_info: flag_hint, ..self }
     }
 }
 
@@ -126,27 +127,27 @@ impl From<CheckerResult<()>> for CheckerResponse {
             Ok(()) => CheckerResponse {
                 result: "OK".to_owned(),
                 message: None,
-                flag_hint: None,
+                attack_info: None,
                 flag: None,
             },
             Err(CheckerError::Mumble(msg)) => CheckerResponse {
                 result: "MUMBLE".to_owned(),
                 message: Some(msg.to_owned()),
-                flag_hint: None,
+                attack_info: None,
                 flag: None,
             },
 
             Err(CheckerError::Offline(msg)) => CheckerResponse {
                 result: "OFFLINE".to_owned(),
                 message: Some(msg.to_owned()),
-                flag_hint: None,
+                attack_info: None,
                 flag: None,
             },
 
             Err(CheckerError::InternalError(msg)) => CheckerResponse {
                 result: "INTERNAL_ERROR".to_owned(),
                 message: Some(msg.to_owned()),
-                flag_hint: None,
+                attack_info: None,
                 flag: None,
             },
         }
