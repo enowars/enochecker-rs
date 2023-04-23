@@ -76,7 +76,7 @@ where
         flag_variants: C::FLAG_VARIANTS,
         noise_variants: C::NOISE_VARIANTS,
         havoc_variants: C::HAVOC_VARIANTS,
-        exploit_variants: C::NOISE_VARIANTS,
+        exploit_variants: C::EXPLOIT_VARIANTS,
     })
 }
 
@@ -103,11 +103,12 @@ pub struct CheckerRequest {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
 struct CheckerResponse {
     result: String,
     message: Option<String>,
     flag: Option<String>,
-    flag_hint: Option<String>,
+    attack_info: Option<String>,
 }
 
 impl CheckerResponse {
@@ -116,7 +117,7 @@ impl CheckerResponse {
     }
 
     pub fn with_hint(self, flag_hint: Option<String>) -> Self {
-        Self { flag_hint, ..self }
+        Self { attack_info: flag_hint, ..self }
     }
 }
 
@@ -126,27 +127,27 @@ impl From<CheckerResult<()>> for CheckerResponse {
             Ok(()) => CheckerResponse {
                 result: "OK".to_owned(),
                 message: None,
-                flag_hint: None,
+                attack_info: None,
                 flag: None,
             },
             Err(CheckerError::Mumble(msg)) => CheckerResponse {
                 result: "MUMBLE".to_owned(),
                 message: Some(msg.to_owned()),
-                flag_hint: None,
+                attack_info: None,
                 flag: None,
             },
 
             Err(CheckerError::Offline(msg)) => CheckerResponse {
                 result: "OFFLINE".to_owned(),
                 message: Some(msg.to_owned()),
-                flag_hint: None,
+                attack_info: None,
                 flag: None,
             },
 
             Err(CheckerError::InternalError(msg)) => CheckerResponse {
                 result: "INTERNAL_ERROR".to_owned(),
                 message: Some(msg.to_owned()),
-                flag_hint: None,
+                attack_info: None,
                 flag: None,
             },
         }
@@ -163,7 +164,7 @@ async fn check<C: Checker>(
         taskId = checker_request.task_id,
         teamId = checker_request.team_id,
         teamName = checker_request.team_name.as_str(),
-        currentRound = checker_request.current_round_id,
+        currentRoundId = checker_request.current_round_id,
         relatedRoundId = checker_request.related_round_id,
         flag = field::Empty,
         variantId = checker_request.variant_id,
@@ -181,14 +182,14 @@ async fn check<C: Checker>(
             let res: Pin<Box<dyn futures::Future<Output = Result<(), CheckerError>> + Send>> =
                 Box::pin(async {
                     let res = checker.putflag(&checker_request).await;
-                    let res = match res {
+
+                    match res {
                         Ok(flag_hint_result) => {
                             flag_hint = flag_hint_result;
                             Ok(())
                         }
                         Err(v) => Err(v),
-                    };
-                    res
+                    }
                 });
             res.instrument(error_span!(parent: &check_span, "PUTFLAG"))
         }

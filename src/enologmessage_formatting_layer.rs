@@ -122,12 +122,9 @@ where
             serializer.serialize_entry("serviceName", &self.service_name)?;
 
             serializer.serialize_entry("function", meta.target())?;
-            if let Some(filename) = meta.file() {
-                serializer.serialize_entry("filename", filename)?;
-            }
 
-            if let Some(line_number) = meta.line() {
-                serializer.serialize_entry("lineNumber", &line_number)?;
+            if let (Some(filename), Some(line_number)) = (meta.file(), meta.line()) {
+                serializer.serialize_entry("location", &format!("{filename}:{line_number}"))?;
             }
 
             if let Some(ref span) = current_span {
@@ -136,7 +133,7 @@ where
                     .unwrap_or(());
             }
 
-            serializer.serialize_entry("spans", &SerializableContext(&ctx, format_field_marker))?;
+            serializer.serialize_entry("spans", &SerializableContext(ctx, format_field_marker))?;
 
             serializer.end()
         };
